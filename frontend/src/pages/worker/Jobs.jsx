@@ -96,8 +96,12 @@ const WorkerJobs = () => {
   };
 
   const SidebarLink = ({ to, label, icon, active }) => (
-    <Link to={to} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${active ? 'bg-primary/20 text-primary font-bold' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-      <span className={`material-symbols-outlined ${active ? 'text-primary' : ''}`} style={active ? { fontVariationSettings: "'FILL' 1" } : {}}>{icon}</span>
+    <Link to={to} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${active ? 
+    'bg-primary/20 text-primary font-bold' : 
+    'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+      <span className={`material-symbols-outlined ${active ? 'text-primary' : ''}`} 
+      style={active ? { fontVariationSettings: "'FILL' 1" } : {}}>
+        {icon}</span>
       <p className="text-sm leading-normal">{label}</p>
     </Link>
   );
