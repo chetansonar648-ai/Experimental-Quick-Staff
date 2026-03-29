@@ -54,7 +54,7 @@ const WorkerJobs = () => {
       const result = await updateWorkerJobStatus(id, newStatus);
 
       // Show notification with undo option for accept/reject/cancel
-      const canUndo = ['accepted', 'rejected', 'cancelled'].includes(newStatus);
+      const canUndo = ['accepted', 'rejected', 'cancelled', 'in_progress', 'completed'].includes(newStatus);
 
       showToast(
         actionLabels[newStatus] || `Status updated to ${newStatus}`,
