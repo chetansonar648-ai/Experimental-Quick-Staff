@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
+import { useLocation } from "react-router-dom";
 
 const schema = yup.object({
   name: yup.string().required('Full name required'),
@@ -18,17 +19,87 @@ export default function ClientRegisterPage () {
   const [serverError, setServerError] = useState('')
   const navigate = useNavigate()
   const { login } = useAuth()
+  const location = useLocation();
+const isGoogle = new URLSearchParams(location.search).get("google");
 
-  const onSubmit = async (values) => {
-    setServerError('')
-    try {
-      const data = await api.register({ name: values.name, email: values.email, password: values.password, role: 'client' })
-      login(data)
-      navigate('/')
-    } catch (err) {
-      setServerError(err.message)
+const onSubmit = async (values) => {
+  setServerError('');
+
+  try {
+    const payload = {
+      name: values.name,
+      email: values.email,
+      role: "client",
+      phone: values.phone,
+      address: values.address,
+    };
+
+    // normal user
+    if (!isGoogle) {
+      payload.password = values.password;
     }
+
+    // google user
+    if (isGoogle) {
+      payload.googleToken = localStorage.getItem("googleToken");
+    }
+
+    const data = await api.register(payload);
+
+    // ✅ login user
+    login(data);
+
+    navigate('/');
+
+  } catch (err) {
+    setServerError(err.message);
   }
+};
+
+
+//   const onSubmit = async (values) => {
+//     setServerError('')
+//     try {
+//       const payload = {
+//   name: values.name,
+//   email: values.email,
+//   role: "client",
+// };
+
+// // if normal user
+// // if (!isGoogle) {
+// //   payload.password = values.password;
+// // }
+
+// // if google user
+// if (isGoogle) {
+//   payload.googleToken = localStorage.getItem("googleToken");
+// }
+
+// // const data = await api.register(payload);
+// let data;
+
+// if (isGoogle) {
+//   // update existing user
+//   data = await api.updateProfile({
+//     phone: values.phone,
+//     address: values.address,
+//   });
+// } else {
+//   // normal registration
+//   data = await api.register({
+//     name: values.name,
+//     email: values.email,
+//     password: values.password,
+//     role: "client",
+//   });
+// }
+//       login(data)
+//       navigate('/')
+//     } catch (err) {
+//       setServerError(err.message)
+//     }
+//   }
 
   return (
     <div className="page" style={{ maxWidth: 1100 }}>
@@ -48,13 +119,25 @@ export default function ClientRegisterPage () {
               {errors.email && <span className="error">{errors.email.message}</span>}
             </div>
             <div className="form-group">
-              <label>Password</label>
-              <input type="password" {...register('password')} placeholder="Create a password" />
+               {/* <label>Password</label> */}
+              {!isGoogle && (
+  <div className="form-group">
+    <label>Password</label>
+    <input type="password" {...register('password')} placeholder="Create a password" />
+    {errors.password && <span className="error">{errors.password.message}</span>}
+  </div>
+)}
               {errors.password && <span className="error">{errors.password.message}</span>}
             </div>
             <div className="form-group">
               <label>Confirm Password</label>
-              <input type="password" {...register('confirm')} placeholder="Confirm password" />
+              {!isGoogle && (
+  <div className="form-group">
+    <label>Confirm Password</label>
+    <input type="password" {...register('confirm')} placeholder="Confirm password" />
+    {errors.confirm && <span className="error">{errors.confirm.message}</span>}
+  </div>
+)}
               {errors.confirm && <span className="error">{errors.confirm.message}</span>}
             </div>
             <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 14, color: '#617c89' }}>

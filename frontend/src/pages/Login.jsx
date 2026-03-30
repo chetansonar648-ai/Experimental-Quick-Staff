@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import loginBg from "../assets/login_background.png";
+import { GoogleLogin } from "@react-oauth/google";
 
 const Login = () => {
   const { login, user } = useAuth();
@@ -10,6 +11,8 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+const [googleData, setGoogleData] = useState(null);
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -35,6 +38,54 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+ const handleGoogleLogin = async (res, selectedRole = null) => {
+  const response = await fetch("http://localhost:4000/api/auth/google", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      token: res.credential,
+      role: selectedRole
+    }),
+  });
+
+  const data = await response.json();
+
+  if (data.newUser) {
+  setGoogleData(res);
+  setShowRoleModal(true);
+  return;
+}
+
+
+  login(data);
+
+  // ✅ redirect
+  if (data.user.role === 'client') {
+    navigate("/client");
+  } else if (data.user.role === 'worker') {
+    navigate("/worker/dashboard");
+  } else {
+    navigate("/");
+  }
+};
+
+const selectRole = (role) => {
+  setShowRoleModal(false);
+
+  // store google token temporarily
+  localStorage.setItem("googleToken", googleData.credential);
+
+  // redirect to registration page
+  if (role === "client") {
+    navigate("/register/client?google=true");
+  } else {
+    navigate("/register/worker?google=true");
+  }
+};
+
 
   return (
     <div className="font-display bg-[#f5f7f8] dark:bg-[#101922] text-[#111418] dark:text-[#f5f7f8]">
@@ -105,6 +156,13 @@ const Login = () => {
                       >
                         <span className="truncate">{loading ? "Logging in..." : "Log In"}</span>
                       </button>
+
+                      <div className="flex justify-center mt-4">
+  <GoogleLogin
+    onSuccess={(res) => handleGoogleLogin(res)}
+    onError={() => console.log("Login Failed")}
+  />
+</div>
                       <p className="text-center text-sm text-[#60758a] dark:text-[#a0b0c0]">
                         New to Quick Staff? <Link className="font-bold text-[#0d7ff2] hover:underline" to="/register">Create an account</Link>
                       </p>
@@ -116,6 +174,27 @@ const Login = () => {
           </div>
         </div>
       </div>
+      {showRoleModal && (
+  <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center">
+    <div className="bg-white p-6 rounded">
+      <h2 className="text-lg font-bold mb-4">Select Role</h2>
+
+      <button
+        className="bg-blue-500 text-white px-4 py-2 mr-2"
+        onClick={() => selectRole("client")}
+      >
+        Client
+      </button>
+
+      <button
+        className="bg-green-500 text-white px-4 py-2"
+        onClick={() => selectRole("worker")}
+      >
+        Worker
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 };

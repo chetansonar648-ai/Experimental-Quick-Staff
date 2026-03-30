@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
+import { useLocation } from "react-router-dom";
 
 const schema = yup.object({
   name: yup.string().required('Full name required'),
@@ -21,22 +22,78 @@ export default function WorkerRegisterPage () {
   const [serverError, setServerError] = useState('')
   const navigate = useNavigate()
   const { login } = useAuth()
+  const location = useLocation();
+const isGoogle = new URLSearchParams(location.search).get("google");
 
-  const onSubmit = async (values) => {
-    setServerError('')
-    try {
-      const data = await api.register({ name: values.name, email: values.email, password: values.password, role: 'worker' })
-      // store initial skills info in profile
-      await api.saveWorkerProfile({
-        bio: values.summary || '',
-        skills: (values.primarySkill ? [values.primarySkill] : []).concat(values.skills.split(',').map((s) => s.trim()).filter(Boolean))
-      })
-      login(data)
-      navigate('/worker/dashboard')
-    } catch (err) {
-      setServerError(err.message)
+const onSubmit = async (values) => {
+  setServerError('');
+
+  try {
+    const payload = {
+      name: values.name,
+      email: values.email,
+      role: "worker",
+    };
+
+    // normal user
+    if (!isGoogle) {
+      payload.password = values.password;
     }
+
+    // google user
+    if (isGoogle) {
+      payload.googleToken = localStorage.getItem("googleToken");
+    }
+
+    const data = await api.register(payload);
+
+    // ✅ save worker profile
+    await api.saveWorkerProfile({
+      bio: values.summary || '',
+      skills: (values.primarySkill ? [values.primarySkill] : [])
+        .concat(values.skills.split(',').map(s => s.trim()).filter(Boolean))
+    });
+
+    // ✅ login user
+    login(data);
+
+    navigate('/worker/dashboard');
+
+  } catch (err) {
+    setServerError(err.message);
   }
+};
+
+
+//   const onSubmit = async (values) => { 
+//     setServerError('')
+//     try {
+//      const payload = {
+//   name: values.name,
+//   email: values.email,
+//   role: "worker",
+// };
+
+// if (!isGoogle) {
+//   payload.password = values.password;
+// }
+
+// if (isGoogle) {
+//   payload.googleToken = localStorage.getItem("googleToken");
+// }
+
+// const data = await api.register(payload);
+//       // store initial skills info in profile
+//       await api.saveWorkerProfile({
+//         bio: values.summary || '',
+//         skills: (values.primarySkill ? [values.primarySkill] : []).concat(values.skills.split(',').map((s) => s.trim()).filter(Boolean))
+//       })
+//       login(data)
+//       navigate('/worker/dashboard')
+//     } catch (err) {
+//       setServerError(err.message)
+//     }
+//   }
 
   return (
     <div className="page" style={{ maxWidth: 1100 }}>
@@ -82,17 +139,37 @@ export default function WorkerRegisterPage () {
             </div>
             <div className="form-group">
               <label>Email Address</label>
-              <input type="email" {...register('email')} placeholder="you@example.com" />
+              {/* <input type="email" {...register('email')} placeholder="you@example.com" /> */}
+              <input 
+  type="email" 
+  {...register('email')} 
+  disabled={isGoogle}
+/>
               {errors.email && <span className="error">{errors.email.message}</span>}
             </div>
             <div className="form-group">
               <label>Password</label>
-              <input type="password" {...register('password')} placeholder="Create a strong password" />
+             {!isGoogle && (
+  <div className="form-group">
+    <label>Password</label>
+    <input type="password" {...register('password')} placeholder="Create a password" />
+    {errors.password && <span className="error">{errors.password.message}</span>}
+  </div>
+)}
+
               {errors.password && <span className="error">{errors.password.message}</span>}
             </div>
             <div className="form-group">
               <label>Confirm Password</label>
-              <input type="password" {...register('confirm')} placeholder="Repeat your password" />
+             {!isGoogle && (
+  <div className="form-group">
+    <label>Confirm Password</label>
+    <input type="password" {...register('confirm')} placeholder="Confirm password" />
+    {errors.confirm && <span className="error">{errors.confirm.message}</span>}
+  </div>
+)}
+
+
               {errors.confirm && <span className="error">{errors.confirm.message}</span>}
             </div>
             <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 14, color: '#617c89' }}>

@@ -20,7 +20,26 @@ export const register = async (req, res) => {
       availability,
     } = req.body;
 
-    const passwordHash = await hashPassword(password);
+    if (req.body.googleToken) {
+  const existing = await client.query(
+    "SELECT * FROM users WHERE email=$1",
+    [email]
+  );
+
+  if (existing.rows.length > 0) {
+    const user = existing.rows[0];
+    const token = signToken({ id: user.id, role: user.role, email: user.email });
+
+    return res.json({ user, token });
+  }
+}
+    let passwordHash;
+
+if (req.body.googleToken) {
+  passwordHash = "google_auth"; // no password for google users
+} else {
+  passwordHash = await hashPassword(password);
+}
     const userResult = await client.query(
       `INSERT INTO users (name, email, password, role, phone, address)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -111,3 +130,66 @@ export const me = async (req, res) => {
   });
 };
 
+import { OAuth2Client } from "google-auth-library";
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+export const googleAuth = async (req, res) => {
+  try {
+    const { token, role } = req.body;
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    let userResult = await query("SELECT * FROM users WHERE email=$1", [email]);
+
+    // NEW USER
+    if (userResult.rows.length === 0) {
+
+      if (!role) {
+        return res.json({ newUser: true, email, name });
+      }
+
+      const newUser = await query(
+        "INSERT INTO users(name,email,password,role) VALUES($1,$2,$3,$4) RETURNING *",
+        [name, email, "google_auth", role]
+      );
+
+      const user = newUser.rows[0];
+      const token = signToken(user);
+
+      return res.json({
+  user: {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role
+  },
+  token
+});
+    }
+
+    const user = userResult.rows[0];
+    const jwtToken = signToken(user);
+
+   return res.json({
+  user: {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone,
+    address: user.address
+  },
+  token: jwtToken
+});
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Google login failed" });
+  }
+};
