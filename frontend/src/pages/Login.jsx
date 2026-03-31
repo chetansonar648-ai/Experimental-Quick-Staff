@@ -42,7 +42,7 @@ const [googleData, setGoogleData] = useState(null);
     }
   };
 
- const handleGoogleLogin = async (res, selectedRole = null) => {
+ const handleGoogleLogin = async (res) => {
   const response = await fetch("http://localhost:4000/api/auth/google", {
     method: "POST",
     headers: {
@@ -50,15 +50,27 @@ const [googleData, setGoogleData] = useState(null);
     },
     body: JSON.stringify({
       token: res.credential,
-      role: selectedRole
     }),
   });
 
   const data = await response.json();
 
-  if (data?.newUser || data?.needsRole || !data?.token) {
+  if (data?.newUser === true) {
+    localStorage.setItem("googleToken", res.credential);
+    localStorage.setItem("googleEmail", data.email);
+    localStorage.setItem("googleName", data.name);
+    // CRITICAL DEBUG (required)
+    console.log("[Google Signup] Stored:", {
+      googleEmail: localStorage.getItem("googleEmail"),
+      googleName: localStorage.getItem("googleName"),
+    });
     setGoogleData(res);
     setShowRoleModal(true);
+    return;
+  }
+
+  if (!data?.token || !data?.user) {
+    setError("Google login failed");
     return;
   }
 
@@ -77,16 +89,29 @@ const [googleData, setGoogleData] = useState(null);
 const selectRole = (role) => {
   setShowRoleModal(false);
 
-  // store google token temporarily
-  localStorage.setItem("googleToken", googleData.credential);
+  // store role (required)
+  localStorage.setItem("googleRole", role);
 
-  // redirect to registration page
+  // redirect to register page
   if (role === "client") {
     navigate("/register/client?google=true");
   } else {
     navigate("/register/worker?google=true");
   }
 };
+// const selectRole = (role) => {
+//   setShowRoleModal(false);
+
+//   // store google token temporarily
+//   localStorage.setItem("googleToken", googleData.credential);
+
+//   // redirect to registration page
+//   if (role === "client") {
+//     navigate("/register/client?google=true");
+//   } else {
+//     navigate("/register/worker?google=true");
+//   }
+// };
 
 
   return (

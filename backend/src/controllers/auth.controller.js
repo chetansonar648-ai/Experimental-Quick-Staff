@@ -3,9 +3,9 @@ import { hashPassword, comparePassword } from '../utils/password.js';
 import { signToken } from '../utils/token.js';
 
 export const register = async (req, res) => {
-  const client = await pool.connect();
+  const clientConn = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await clientConn.query('BEGIN');
 
     const {
       name,
@@ -21,6 +21,22 @@ export const register = async (req, res) => {
       googleToken,
     } = req.body;
 
+    if (googleToken) {
+      const ticket = await client.verifyIdToken({
+        idToken: googleToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      if (!payload?.email) {
+        await clientConn.query('ROLLBACK');
+        return res.status(401).json({ message: 'Invalid Google token' });
+      }
+      if (email && payload.email !== email) {
+        await clientConn.query('ROLLBACK');
+        return res.status(400).json({ message: 'Email does not match Google account' });
+      }
+    }
+
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
     }
@@ -29,16 +45,16 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: 'Role is required' });
     }
 
-    const existing = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    const existing = await clientConn.query('SELECT * FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
       const existingUser = existing.rows[0];
       if (!googleToken) {
-        await client.query('ROLLBACK');
+        await clientConn.query('ROLLBACK');
         return res.status(409).json({ message: 'Email already exists' });
       }
       const token = signToken({ id: existingUser.id, role: existingUser.role, email: existingUser.email });
       res.cookie('token', token, { httpOnly: true, sameSite: 'lax' });
-      await client.query('COMMIT');
+      await clientConn.query('COMMIT');
       return res.json({
         user: {
           id: existingUser.id,
@@ -61,7 +77,7 @@ export const register = async (req, res) => {
       passwordHash = await hashPassword(password);
     }
 
-    const userResult = await client.query(
+    const userResult = await clientConn.query(
       `INSERT INTO users (name, email, password, role, phone, address)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, name, email, role`,
@@ -70,26 +86,26 @@ export const register = async (req, res) => {
     const user = userResult.rows[0];
 
     if (role === 'worker') {
-      await client.query(
+      await clientConn.query(
         `INSERT INTO worker_profiles (user_id, bio, skills, hourly_rate, availability)
          VALUES ($1, $2, $3, $4, $5)`,
         [user.id, bio || '', skills, hourly_rate || null, availability || {}]
       );
     }
 
-    await client.query('COMMIT');
+    await clientConn.query('COMMIT');
     const token = signToken({ id: user.id, role: user.role, email: user.email });
     res.cookie('token', token, { httpOnly: true, sameSite: 'lax' });
     return res.status(201).json({ user, token });
   } catch (err) {
-    await client.query('ROLLBACK');
+    await clientConn.query('ROLLBACK');
     console.error('Registration Error:', err);
     const isDuplicate = err?.message?.includes('users_email_key');
     return res.status(isDuplicate ? 409 : 500).json({
       message: isDuplicate ? 'Email already exists' : 'Registration failed',
     });
   } finally {
-    client.release();
+    clientConn.release();
   }
 };
 
@@ -156,7 +172,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const googleAuth = async (req, res) => {
   try {
-    const { token: googleIdToken, role } = req.body;
+    const { token: googleIdToken } = req.body;
 
     const ticket = await client.verifyIdToken({
       idToken: googleIdToken,
@@ -168,24 +184,9 @@ export const googleAuth = async (req, res) => {
 
     let userResult = await query("SELECT * FROM users WHERE email=$1", [email]);
 
-    // NEW USER
+    // NEW USER: do NOT create here
     if (userResult.rows.length === 0) {
-      if (!role) {
-        return res.status(400).json({ message: 'Role is required' });
-      }
-
-      const newUser = await query(
-        `INSERT INTO users(name,email,password,role)
-         VALUES($1,$2,$3,$4)
-         RETURNING id, name, email, role, phone, address, profile_image`,
-        [name, email, "google_auth", role]
-      );
-
-      const user = newUser.rows[0];
-      const jwtToken = signToken({ id: user.id, role: user.role, email: user.email });
-      res.cookie('token', jwtToken, { httpOnly: true, sameSite: 'lax' });
-
-      return res.json({ user, token: jwtToken });
+      return res.json({ newUser: true, email, name });
     }
 
     const finalUser = userResult.rows[0];

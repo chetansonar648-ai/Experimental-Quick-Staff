@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -9,10 +9,11 @@ import { useLocation } from "react-router-dom";
 
 export default function WorkerRegisterPage () {
   const [serverError, setServerError] = useState('')
+  const [refresh, setRefresh] = useState(false)
   const navigate = useNavigate()
   const { login } = useAuth()
-  const location = useLocation();
-  const isGoogle = new URLSearchParams(location.search).get("google") === "true";
+  const location = useLocation()
+  const isGoogle = new URLSearchParams(location.search).get("google")
 
   const schema = yup.object({
     name: yup.string().required('Full name required'),
@@ -26,15 +27,47 @@ export default function WorkerRegisterPage () {
     primarySkill: yup.string().optional()
   })
 
-  const { register, handleSubmit, formState: { errors } } = useForm({ resolver: yupResolver(schema) })
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      name: "",
+      email: ""
+    }
+  })
+
+  useEffect(() => {
+const isGoogleUser = new URLSearchParams(window.location.search).get("google");
+
+console.log("isGoogleUser:", isGoogleUser);
+
+if (!isGoogleUser) return;
+
+const email = localStorage.getItem("googleEmail");
+const name = localStorage.getItem("googleName");
+
+console.log("Prefill data:", { email, name });
+
+if (email) setValue("email", email, { shouldValidate: true });
+if (name) setValue("name", name, { shouldValidate: true });
+
+  }, [setValue]);
+
+  useEffect(() => {
+    const email = localStorage.getItem("googleEmail");
+    const name = localStorage.getItem("googleName");
+
+    if (email || name) {
+      setRefresh(prev => !prev);
+    }
+  }, []);
 
 const onSubmit = async (values) => {
   setServerError('');
 
   try {
     const payload = {
-      name: values.name,
-      email: values.email,
+      name: isGoogle ? (localStorage.getItem("googleName") || values.name) : values.name,
+      email: isGoogle ? (localStorage.getItem("googleEmail") || values.email) : values.email,
       role: "worker",
     };
 
@@ -111,7 +144,7 @@ const onSubmit = async (values) => {
         <div className="card" style={{ border: '1px solid #e5e8ef' }}>
           <h2 style={{ margin: '0 0 8px' }}>Create Worker Account</h2>
           <p style={{ color: '#617c89', marginTop: 0 }}>Fill in your details to get started.</p>
-          <form className="grid" style={{ gap: 12, marginTop: 12 }} onSubmit={handleSubmit(onSubmit)}>
+          <form key={refresh ? "r1" : "r0"} className="grid" style={{ gap: 12, marginTop: 12 }} onSubmit={handleSubmit(onSubmit)}>
             <div className="form-group">
               <label>Full Name</label>
               <input {...register('name')} placeholder="e.g., John Doe" />
