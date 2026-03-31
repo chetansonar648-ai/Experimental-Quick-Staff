@@ -4,23 +4,26 @@ import * as yup from 'yup'
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../../services/api'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { useLocation } from "react-router-dom";
 
-const schema = yup.object({
-  name: yup.string().required('Full name required'),
-  email: yup.string().email().required('Email required'),
-  password: yup.string().min(6).required('Password required'),
-  confirm: yup.string().oneOf([yup.ref('password')], 'Passwords must match')
-})
-
 export default function ClientRegisterPage () {
-  const { register, handleSubmit, formState: { errors } } = useForm({ resolver: yupResolver(schema) })
   const [serverError, setServerError] = useState('')
   const navigate = useNavigate()
   const { login } = useAuth()
   const location = useLocation();
-const isGoogle = new URLSearchParams(location.search).get("google");
+  const isGoogle = new URLSearchParams(location.search).get("google") === "true";
+
+  const schema = yup.object({
+    name: yup.string().required('Full name required'),
+    email: yup.string().email().required('Email required'),
+    password: isGoogle ? yup.string().notRequired() : yup.string().min(6).required('Password required'),
+    confirm: isGoogle
+      ? yup.string().notRequired()
+      : yup.string().oneOf([yup.ref('password')], 'Passwords must match').required('Confirm password required')
+  })
+
+  const { register, handleSubmit, formState: { errors } } = useForm({ resolver: yupResolver(schema) })
 
 const onSubmit = async (values) => {
   setServerError('');

@@ -18,28 +18,49 @@ export const register = async (req, res) => {
       skills = [],
       hourly_rate,
       availability,
+      googleToken,
     } = req.body;
 
-    if (req.body.googleToken) {
-  const existing = await client.query(
-    "SELECT * FROM users WHERE email=$1",
-    [email]
-  );
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
 
-  if (existing.rows.length > 0) {
-    const user = existing.rows[0];
-    const token = signToken({ id: user.id, role: user.role, email: user.email });
+    if (!role) {
+      return res.status(400).json({ message: 'Role is required' });
+    }
 
-    return res.json({ user, token });
-  }
-}
-    let passwordHash;
+    const existing = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      const existingUser = existing.rows[0];
+      if (!googleToken) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ message: 'Email already exists' });
+      }
+      const token = signToken({ id: existingUser.id, role: existingUser.role, email: existingUser.email });
+      res.cookie('token', token, { httpOnly: true, sameSite: 'lax' });
+      await client.query('COMMIT');
+      return res.json({
+        user: {
+          id: existingUser.id,
+          name: existingUser.name,
+          email: existingUser.email,
+          role: existingUser.role,
+          phone: existingUser.phone,
+          address: existingUser.address,
+          profile_image: existingUser.profile_image,
+        },
+        token,
+      });
+    }
 
-if (req.body.googleToken) {
-  passwordHash = "google_auth"; // no password for google users
-} else {
-  passwordHash = await hashPassword(password);
-}
+    let passwordHash = 'google_auth';
+    if (!googleToken) {
+      if (!password) {
+        return res.status(400).json({ message: 'Password is required' });
+      }
+      passwordHash = await hashPassword(password);
+    }
+
     const userResult = await client.query(
       `INSERT INTO users (name, email, password, role, phone, address)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -135,10 +156,10 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const googleAuth = async (req, res) => {
   try {
-    const { token, role } = req.body;
+    const { token: googleIdToken, role } = req.body;
 
     const ticket = await client.verifyIdToken({
-      idToken: token,
+      idToken: googleIdToken,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
@@ -149,44 +170,40 @@ export const googleAuth = async (req, res) => {
 
     // NEW USER
     if (userResult.rows.length === 0) {
-
       if (!role) {
-        return res.json({ newUser: true, email, name });
+        return res.status(400).json({ message: 'Role is required' });
       }
 
       const newUser = await query(
-        "INSERT INTO users(name,email,password,role) VALUES($1,$2,$3,$4) RETURNING *",
+        `INSERT INTO users(name,email,password,role)
+         VALUES($1,$2,$3,$4)
+         RETURNING id, name, email, role, phone, address, profile_image`,
         [name, email, "google_auth", role]
       );
 
       const user = newUser.rows[0];
-      const token = signToken(user);
+      const jwtToken = signToken({ id: user.id, role: user.role, email: user.email });
+      res.cookie('token', jwtToken, { httpOnly: true, sameSite: 'lax' });
 
-      return res.json({
-  user: {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role
-  },
-  token
-});
+      return res.json({ user, token: jwtToken });
     }
 
-    const user = userResult.rows[0];
-    const jwtToken = signToken(user);
+    const finalUser = userResult.rows[0];
+    const jwtToken = signToken({ id: finalUser.id, role: finalUser.role, email: finalUser.email });
+    res.cookie('token', jwtToken, { httpOnly: true, sameSite: 'lax' });
 
-   return res.json({
-  user: {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    phone: user.phone,
-    address: user.address
-  },
-  token: jwtToken
-});
+    return res.json({
+      user: {
+        id: finalUser.id,
+        name: finalUser.name,
+        email: finalUser.email,
+        role: finalUser.role,
+        phone: finalUser.phone,
+        address: finalUser.address,
+        profile_image: finalUser.profile_image,
+      },
+      token: jwtToken,
+    });
 
   } catch (err) {
     console.error(err);

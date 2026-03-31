@@ -4,26 +4,29 @@ import * as yup from 'yup'
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../../services/api'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { useLocation } from "react-router-dom";
 
-const schema = yup.object({
-  name: yup.string().required('Full name required'),
-  skills: yup.string().required('Profession / skills required'),
-  email: yup.string().email().required('Email required'),
-  password: yup.string().min(6).required('Password required'),
-  confirm: yup.string().oneOf([yup.ref('password')], 'Passwords must match'),
-  summary: yup.string().max(500).optional(),
-  primarySkill: yup.string().optional()
-})
-
 export default function WorkerRegisterPage () {
-  const { register, handleSubmit, formState: { errors } } = useForm({ resolver: yupResolver(schema) })
   const [serverError, setServerError] = useState('')
   const navigate = useNavigate()
   const { login } = useAuth()
   const location = useLocation();
-const isGoogle = new URLSearchParams(location.search).get("google");
+  const isGoogle = new URLSearchParams(location.search).get("google") === "true";
+
+  const schema = yup.object({
+    name: yup.string().required('Full name required'),
+    skills: yup.string().required('Profession / skills required'),
+    email: yup.string().email().required('Email required'),
+    password: isGoogle ? yup.string().notRequired() : yup.string().min(6).required('Password required'),
+    confirm: isGoogle
+      ? yup.string().notRequired()
+      : yup.string().oneOf([yup.ref('password')], 'Passwords must match').required('Confirm password required'),
+    summary: yup.string().max(500).optional(),
+    primarySkill: yup.string().optional()
+  })
+
+  const { register, handleSubmit, formState: { errors } } = useForm({ resolver: yupResolver(schema) })
 
 const onSubmit = async (values) => {
   setServerError('');
@@ -47,15 +50,15 @@ const onSubmit = async (values) => {
 
     const data = await api.register(payload);
 
+    // ✅ login first (needed for authenticated profile calls)
+    login(data);
+
     // ✅ save worker profile
     await api.saveWorkerProfile({
       bio: values.summary || '',
       skills: (values.primarySkill ? [values.primarySkill] : [])
         .concat(values.skills.split(',').map(s => s.trim()).filter(Boolean))
     });
-
-    // ✅ login user
-    login(data);
 
     navigate('/worker/dashboard');
 

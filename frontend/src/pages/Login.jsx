@@ -3,9 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import loginBg from "../assets/login_background.png";
 import { GoogleLogin } from "@react-oauth/google";
+import { api } from "../services/api.js";
 
 const Login = () => {
-  const { login, user } = useAuth();
+  const auth = useAuth();
+  const login = auth?.login;
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -21,7 +23,8 @@ const [googleData, setGoogleData] = useState(null);
     setError("");
     setLoading(true);
     try {
-      const data = await login(form);
+      const data = await api.login(form);
+      if (typeof login === "function") login(data);
       // Redirect based on role
       if (data.user.role === 'admin') {
         navigate("/admin");
@@ -53,14 +56,13 @@ const [googleData, setGoogleData] = useState(null);
 
   const data = await response.json();
 
-  if (data.newUser) {
-  setGoogleData(res);
-  setShowRoleModal(true);
-  return;
-}
+  if (data?.newUser || data?.needsRole || !data?.token) {
+    setGoogleData(res);
+    setShowRoleModal(true);
+    return;
+  }
 
-
-  login(data);
+  if (typeof login === "function") login(data);
 
   // ✅ redirect
   if (data.user.role === 'client') {

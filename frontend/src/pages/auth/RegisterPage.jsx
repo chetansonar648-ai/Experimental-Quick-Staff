@@ -4,7 +4,7 @@ import * as yup from 'yup'
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../../services/api'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../context/AuthContext.jsx'
 
 const schema = yup.object({
   name: yup.string().required(),

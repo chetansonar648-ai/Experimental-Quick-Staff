@@ -1,58 +1,68 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { login as apiLogin, logout as apiLogout, me as apiMe, register as apiRegister } from "../api/client.js";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { api } from "../services/api.js";
 
 const AuthContext = createContext(null);
 
+const USER_KEY = "qs_user";
+const TOKEN_KEY = "qs_token";
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    try {
+      const cached = localStorage.getItem(USER_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || localStorage.getItem("token"));
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        // /auth/me returns the user object directly, not { user: ... }
-        const data = await apiMe();
-        // Backend /auth/me returns user object directly, not wrapped
-        setUser(data);
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem("token", token); // compatibility with older code
+      api.setToken(token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem("token");
+      api.setToken(null);
+    }
+  }, [token]);
 
-  const login = async (payload) => {
-    const data = await apiLogin(payload);
-    // Store token in localStorage
-    if (data.token) {
-      localStorage.setItem('token', data.token);
+  useEffect(() => {
+    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+    else localStorage.removeItem(USER_KEY);
+  }, [user]);
+
+  const login = (data) => {
+    if (!data?.token || !data?.user) {
+      throw new Error("Invalid auth response: expected { user, token }");
     }
     setUser(data.user);
-    return data;
+    setToken(data.token);
   };
 
-  const register = async (payload) => {
-    const data = await apiRegister(payload);
-    setUser(data.user);
-    return data;
-  };
-
-  const logout = async () => {
-    try {
-      await apiLogout();
-    } catch (err) {
-      // Ignore logout errors
-    }
-    localStorage.removeItem('token');
+  const logout = () => {
     setUser(null);
-    // Redirect to login page
-    window.location.href = '/login';
+    setToken(null);
   };
 
-  return <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>;
+  const value = useMemo(() => ({ user, login, logout }), [user]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (ctx) return ctx;
+  // Prevent "Cannot destructure ... as it is null" crashes if provider is miswired
+  return {
+    user: null,
+    login: () => {
+      throw new Error("AuthProvider is missing. Wrap your app with <AuthProvider>.");
+    },
+    logout: () => {},
+  };
+};
 

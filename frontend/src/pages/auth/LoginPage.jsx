@@ -3,7 +3,7 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import { useState } from 'react'
 import { api } from '../../services/api'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { Link, useNavigate } from 'react-router-dom'
 
 const schema = yup.object({
