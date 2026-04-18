@@ -153,9 +153,9 @@ const Login = () => {
                       </div>
                     </label>
                     {error && <div className="text-sm text-red-600">{error}</div>}
-                    <div className="flex flex-wrap items-center justify-end gap-4">
+                    {/* <div className="flex flex-wrap items-center justify-end gap-4">
                       <Link className="text-sm font-medium text-[#0d7ff2] hover:underline" to="/forgot-password">Forgot Password?</Link>
-                    </div>
+                    </div> */}
                     <div className="flex flex-col gap-4">
                       <button
                         type="submit"
