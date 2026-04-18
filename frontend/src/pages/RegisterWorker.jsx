@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const RegisterWorker = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isGoogle = useMemo(
+    () => new URLSearchParams(location.search).get("google") === "true",
+    [location.search]
+  );
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -26,14 +31,34 @@ const RegisterWorker = () => {
   useEffect(() => {
     if (showSuccess) {
       const timer = setTimeout(() => {
-        navigate("/login");
+        navigate("/worker/dashboard");
       }, 3000);
       return () => clearTimeout(timer);
     }
   }, [showSuccess, navigate]);
 
   const handleSuccessClose = () => {
-    navigate("/login");
+    navigate("/worker/dashboard");
+  };
+
+  useEffect(() => {
+    if (!isGoogle) return;
+    const stored = localStorage.getItem("googleData");
+    if (!stored) return;
+    try {
+      const googleData = JSON.parse(stored);
+      setForm((prev) => ({
+        ...prev,
+        name: googleData?.name || prev.name,
+        email: googleData?.email || prev.email,
+      }));
+    } catch {
+      // Ignore malformed storage payload.
+    }
+  }, [isGoogle]);
+  const clearGoogleAuthData = () => {
+    localStorage.removeItem("googleToken");
+    localStorage.removeItem("googleData");
   };
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -42,7 +67,7 @@ const RegisterWorker = () => {
     e.preventDefault();
     setError("");
 
-    if (form.password !== form.confirmPassword) {
+    if (!isGoogle && form.password !== form.confirmPassword) {
       setError("Passwords do not match");
       return;
     }
@@ -55,11 +80,24 @@ const RegisterWorker = () => {
     setLoading(true);
     try {
       const { confirmPassword, terms, skills, hourly_rate, ...rest } = form;
-      // Convert skills from comma-separated string to array
       const skillsArray = skills ? skills.split(',').map(s => s.trim()).filter(Boolean) : [];
-      // Convert hourly_rate to number
       const hourlyRateNum = hourly_rate ? parseFloat(hourly_rate) : null;
-      await register({ ...rest, skills: skillsArray, hourly_rate: hourlyRateNum, role: "worker" });
+      const googleData = isGoogle ? JSON.parse(localStorage.getItem("googleData") || "{}") : null;
+      const payload = {
+        ...rest,
+        skills: skillsArray,
+        hourly_rate: hourlyRateNum,
+        role: "worker",
+      };
+
+      if (isGoogle) {
+        payload.google_auth = true;
+        payload.googleToken = localStorage.getItem("googleToken");
+        payload.profile_image = googleData?.picture || null;
+      }
+
+      await register(payload);
+      if (isGoogle) clearGoogleAuthData();
       setShowSuccess(true);
     } catch (err) {
       setError(err.message);
@@ -117,52 +155,57 @@ const RegisterWorker = () => {
                 required
                 value={form.email}
                 onChange={onChange}
+                disabled={isGoogle}
                 className="h-11 rounded-lg border border-border-light px-3"
                 placeholder="you@example.com"
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Password</label>
-              <div className="relative">
-                <input
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={form.password}
-                  onChange={onChange}
-                  className="h-11 w-full rounded-lg border border-border-light px-3 pr-10"
-                  placeholder="Create a strong password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                >
-                  <span className="material-symbols-outlined text-base">visibility</span>
-                </button>
+            {!isGoogle && (
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Password</label>
+                <div className="relative">
+                  <input
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={form.password}
+                    onChange={onChange}
+                    className="h-11 w-full rounded-lg border border-border-light px-3 pr-10"
+                    placeholder="Create a strong password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                  >
+                    <span className="material-symbols-outlined text-base">visibility</span>
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Confirm Password</label>
-              <div className="relative">
-                <input
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  required
-                  value={form.confirmPassword}
-                  onChange={onChange}
-                  className="h-11 w-full rounded-lg border border-border-light px-3 pr-10"
-                  placeholder="Repeat your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                >
-                  <span className="material-symbols-outlined text-base">visibility</span>
-                </button>
+            )}
+            {!isGoogle && (
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Confirm Password</label>
+                <div className="relative">
+                  <input
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    value={form.confirmPassword}
+                    onChange={onChange}
+                    className="h-11 w-full rounded-lg border border-border-light px-3 pr-10"
+                    placeholder="Repeat your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                  >
+                    <span className="material-symbols-outlined text-base">visibility</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Phone</label>
               <input

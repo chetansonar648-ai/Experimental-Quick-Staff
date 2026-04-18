@@ -26,6 +26,7 @@ export const api = {
   },
   login: (data) => instance.post('/auth/login', data).then((r) => r.data),
   register: (data) => instance.post('/auth/register', data).then((r) => r.data),
+  googleAuth: (token) => instance.post('/auth/google', { token }).then((r) => r.data),
   requestOtp: (data) => instance.post('/auth/request-otp', data).then((r) => r.data),
   verifyOtp: (data) => instance.post('/auth/verify-otp', data).then((r) => r.data),
   changePassword: (data) => instance.post('/auth/change-password', data).then((r) => r.data),

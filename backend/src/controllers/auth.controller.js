@@ -18,37 +18,50 @@ export const register = async (req, res) => {
       skills = [],
       hourly_rate,
       availability,
+      google_auth = false,
       googleToken,
+      profile_image,
     } = req.body;
+
+    const isGoogleAuth = Boolean(google_auth || googleToken);
+    let googlePayload = null;
 
     if (googleToken) {
       const ticket = await client.verifyIdToken({
         idToken: googleToken,
         audience: process.env.GOOGLE_CLIENT_ID,
       });
-      const payload = ticket.getPayload();
-      if (!payload?.email) {
+      googlePayload = ticket.getPayload();
+      if (!googlePayload?.email) {
         await clientConn.query('ROLLBACK');
         return res.status(401).json({ message: 'Invalid Google token' });
       }
-      if (email && payload.email !== email) {
+      if (email && googlePayload.email !== email) {
         await clientConn.query('ROLLBACK');
         return res.status(400).json({ message: 'Email does not match Google account' });
       }
     }
 
-    if (!email) {
+    const finalEmail = googlePayload?.email || email;
+    const finalName = name || googlePayload?.name;
+    const finalProfileImage = profile_image || googlePayload?.picture || null;
+
+    if (!finalEmail) {
       return res.status(400).json({ message: 'Email is required' });
+    }
+
+    if (!finalName) {
+      return res.status(400).json({ message: 'Name is required' });
     }
 
     if (!role) {
       return res.status(400).json({ message: 'Role is required' });
     }
 
-    const existing = await clientConn.query('SELECT * FROM users WHERE email = $1', [email]);
+    const existing = await clientConn.query('SELECT * FROM users WHERE email = $1', [finalEmail]);
     if (existing.rows.length > 0) {
       const existingUser = existing.rows[0];
-      if (!googleToken) {
+      if (!isGoogleAuth) {
         await clientConn.query('ROLLBACK');
         return res.status(409).json({ message: 'Email already exists' });
       }
@@ -70,7 +83,7 @@ export const register = async (req, res) => {
     }
 
     let passwordHash = 'google_auth';
-    if (!googleToken) {
+    if (!isGoogleAuth) {
       if (!password) {
         return res.status(400).json({ message: 'Password is required' });
       }
@@ -91,6 +104,11 @@ export const register = async (req, res) => {
          VALUES ($1, $2, $3, $4, $5)`,
         [user.id, bio || '', skills, hourly_rate || null, availability || {}]
       );
+    }
+
+    if (finalProfileImage) {
+      await clientConn.query('UPDATE users SET profile_image = $1 WHERE id = $2', [finalProfileImage, user.id]);
+      user.profile_image = finalProfileImage;
     }
 
     await clientConn.query('COMMIT');
@@ -180,13 +198,15 @@ export const googleAuth = async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { email, name } = payload;
+    const { email, name, picture } = payload;
 
     let userResult = await query("SELECT * FROM users WHERE email=$1", [email]);
 
-    // NEW USER: do NOT create here
     if (userResult.rows.length === 0) {
-      return res.json({ newUser: true, email, name });
+      return res.json({
+        isNewUser: true,
+        googleData: { name, email, picture },
+      });
     }
 
     const finalUser = userResult.rows[0];
@@ -204,6 +224,7 @@ export const googleAuth = async (req, res) => {
         profile_image: finalUser.profile_image,
       },
       token: jwtToken,
+      isNewUser: false,
     });
 
   } catch (err) {

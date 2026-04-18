@@ -22,7 +22,6 @@ import WorkerProfile from "./pages/worker/Profile.jsx";
 import SavedClients from "./pages/worker/SavedClients.jsx";
 import ClientProfileView from "./pages/worker/ClientProfileView.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import { AuthProvider } from "./context/AuthContext.jsx";
 
 // Import Sub-Apps
 import ClientApp from "./apps/client/App.jsx";
@@ -30,7 +29,6 @@ import AdminApp from "./apps/admin/App.jsx";
 
 const App = () => {
   return (
-    <AuthProvider>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
@@ -67,7 +65,6 @@ const App = () => {
         {/* fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </AuthProvider>
   );
 };
 

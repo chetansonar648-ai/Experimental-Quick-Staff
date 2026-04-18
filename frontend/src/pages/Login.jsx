@@ -14,7 +14,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
-const [googleData, setGoogleData] = useState(null);
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -42,63 +41,45 @@ const [googleData, setGoogleData] = useState(null);
     }
   };
 
- const handleGoogleLogin = async (res) => {
-  const response = await fetch("http://localhost:4000/api/auth/google", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      token: res.credential,
-    }),
-  });
+  const handleGoogleLogin = async (res) => {
+    setError("");
+    try {
+      const data = await api.googleAuth(res.credential);
 
-  const data = await response.json();
+      if (data?.isNewUser) {
+        localStorage.setItem("googleToken", res.credential);
+        localStorage.setItem("googleData", JSON.stringify(data.googleData || {}));
+        setShowRoleModal(true);
+        return;
+      }
 
-  if (data?.newUser === true) {
-    localStorage.setItem("googleToken", res.credential);
-    localStorage.setItem("googleEmail", data.email);
-    localStorage.setItem("googleName", data.name);
-    // CRITICAL DEBUG (required)
-    console.log("[Google Signup] Stored:", {
-      googleEmail: localStorage.getItem("googleEmail"),
-      googleName: localStorage.getItem("googleName"),
-    });
-    setGoogleData(res);
-    setShowRoleModal(true);
-    return;
-  }
+      if (!data?.token || !data?.user) {
+        setError("Google login failed");
+        return;
+      }
 
-  if (!data?.token || !data?.user) {
-    setError("Google login failed");
-    return;
-  }
+      if (typeof login === "function") login(data);
 
-  if (typeof login === "function") login(data);
+      if (data.user.role === 'client') {
+        navigate("/client");
+      } else if (data.user.role === 'worker') {
+        navigate("/worker/dashboard");
+      } else {
+        navigate("/");
+      }
+    } catch (err) {
+      setError(err.message || "Google login failed");
+    }
+  };
 
-  // ✅ redirect
-  if (data.user.role === 'client') {
-    navigate("/client");
-  } else if (data.user.role === 'worker') {
-    navigate("/worker/dashboard");
-  } else {
-    navigate("/");
-  }
-};
-
-const selectRole = (role) => {
-  setShowRoleModal(false);
-
-  // store role (required)
-  localStorage.setItem("googleRole", role);
-
-  // redirect to register page
-  if (role === "client") {
-    navigate("/register/client?google=true");
-  } else {
-    navigate("/register/worker?google=true");
-  }
-};
+  const selectRole = (role) => {
+    setShowRoleModal(false);
+    if (role === "client") {
+      navigate("/register/client?google=true");
+    } else {
+      navigate("/register/worker?google=true");
+    }
+  };
 // const selectRole = (role) => {
 //   setShowRoleModal(false);
 

@@ -43,12 +43,18 @@ export const AuthProvider = ({ children }) => {
     setToken(data.token);
   };
 
+  const register = async (payload) => {
+    const data = await api.register(payload);
+    login(data);
+    return data;
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
   };
 
-  const value = useMemo(() => ({ user, login, logout }), [user]);
+  const value = useMemo(() => ({ user, login, register, logout, loading: false }), [user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
@@ -62,7 +68,11 @@ export const useAuth = () => {
     login: () => {
       throw new Error("AuthProvider is missing. Wrap your app with <AuthProvider>.");
     },
+      register: () => {
+        throw new Error("AuthProvider is missing. Wrap your app with <AuthProvider>.");
+      },
     logout: () => {},
+      loading: false,
   };
 };
 
