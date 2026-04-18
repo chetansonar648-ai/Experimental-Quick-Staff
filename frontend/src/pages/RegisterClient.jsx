@@ -1,15 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { GoogleLogin } from "@react-oauth/google";
+import { api } from "../services/api.js";
 
 const RegisterClient = () => {
-  const { register } = useAuth();
+  const { register, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isGoogle = useMemo(
     () => new URLSearchParams(location.search).get("google") === "true",
     [location.search]
   );
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "", address: "", terms: false });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +20,20 @@ const RegisterClient = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-    if (!isGoogle) return;
+    const role = "client";
+    const storedRole = localStorage.getItem("googleRole");
+    const hasGoogleDraft =
+      storedRole === role &&
+      Boolean(localStorage.getItem("googleToken")) &&
+      Boolean(localStorage.getItem("googleData"));
+    setIsGoogleUser(hasGoogleDraft);
+  }, []);
+
+  useEffect(() => {
+    const role = location.pathname.includes("worker") ? "worker" : "client";
+    const storedRole = localStorage.getItem("googleRole");
+    if (storedRole && storedRole !== role) return;
+    if (!isGoogle && !storedRole) return;
     const stored = localStorage.getItem("googleData");
     if (!stored) return;
     try {
@@ -27,10 +43,48 @@ const RegisterClient = () => {
         name: googleData?.name || prev.name,
         email: googleData?.email || prev.email,
       }));
+      if (storedRole === role) setIsGoogleUser(true);
     } catch {
       // Ignore malformed storage payload.
     }
-  }, [isGoogle]);
+  }, [isGoogle, location.pathname]);
+
+  const handleGoogleRegisterSuccess = async (res) => {
+    setError("");
+    const role = location.pathname.includes("worker") ? "worker" : "client";
+    try {
+      const data = await api.googleAuth(res.credential);
+
+      if (data?.isNewUser) {
+        localStorage.setItem("googleToken", res.credential);
+        localStorage.setItem("googleData", JSON.stringify(data.googleData || {}));
+        localStorage.setItem("googleRole", role);
+        setIsGoogleUser(true);
+        setForm((prev) => ({
+          ...prev,
+          name: data.googleData?.name || prev.name,
+          email: data.googleData?.email || prev.email,
+        }));
+        return;
+      }
+
+      if (!data?.token || !data?.user) {
+        setError("Google login failed");
+        return;
+      }
+
+      // existing user: must match current role
+      if (data.user.role !== role) {
+        setError(`This Google account is registered as a ${data.user.role}.`);
+        return;
+      }
+
+      login(data);
+      navigate(role === "client" ? "/client" : "/worker/dashboard");
+    } catch (err) {
+      setError(err.message || "Google login failed");
+    }
+  };
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -38,7 +92,7 @@ const RegisterClient = () => {
     e.preventDefault();
     setError("");
 
-    if (!isGoogle && form.password !== form.confirmPassword) {
+    if (!isGoogleUser && form.password !== form.confirmPassword) {
       setError("Passwords do not match");
       return;
     }
@@ -51,23 +105,27 @@ const RegisterClient = () => {
     setLoading(true);
     try {
       const { confirmPassword, terms, ...registerData } = form;
-      const googleData = isGoogle ? JSON.parse(localStorage.getItem("googleData") || "{}") : null;
+      const googleData = isGoogleUser ? JSON.parse(localStorage.getItem("googleData") || "{}") : null;
+      const storedGoogleRole = localStorage.getItem("googleRole");
       const payload = {
         ...registerData,
         role: "client",
       };
 
-      if (isGoogle) {
+      if (isGoogleUser || storedGoogleRole === "client") {
         payload.google_auth = true;
         payload.googleToken = localStorage.getItem("googleToken");
         payload.profile_image = googleData?.picture || null;
+        // Ensure we don't accidentally send password fields for Google users
+        delete payload.password;
       }
 
       await register(payload);
 
-      if (isGoogle) {
+      if (isGoogleUser || storedGoogleRole === "client") {
         localStorage.removeItem("googleToken");
         localStorage.removeItem("googleData");
+        localStorage.removeItem("googleRole");
       }
 
       navigate("/client");
@@ -115,7 +173,10 @@ const RegisterClient = () => {
                 required
                 value={form.name}
                 onChange={onChange}
-                className="h-11 rounded-lg border border-border-light px-3"
+                disabled={isGoogleUser}
+                className={`h-11 rounded-lg border border-border-light px-3 ${
+                  isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 placeholder="Jane Doe"
               />
             </div>
@@ -127,12 +188,14 @@ const RegisterClient = () => {
                 required
                 value={form.email}
                 onChange={onChange}
-                disabled={isGoogle}
-                className="h-11 rounded-lg border border-border-light px-3"
+                disabled={isGoogleUser}
+                className={`h-11 rounded-lg border border-border-light px-3 ${
+                  isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 placeholder="you@example.com"
               />
             </div>
-            {!isGoogle && (
+            {!isGoogleUser && (
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Password</label>
                 <div className="relative">
@@ -155,7 +218,7 @@ const RegisterClient = () => {
                 </div>
               </div>
             )}
-            {!isGoogle && (
+            {!isGoogleUser && (
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Confirm Password</label>
                 <div className="relative">
@@ -215,6 +278,12 @@ const RegisterClient = () => {
             </label>
           </div>
           {error && <div className="text-sm text-red-600">{error}</div>}
+          {/* <div className="mt-4 flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleRegisterSuccess}
+              onError={() => setError("Google login failed")}
+            />
+          </div> */}
           <button
             type="submit"
             disabled={loading}
@@ -222,6 +291,13 @@ const RegisterClient = () => {
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
+
+          <div className="mt-4 flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleRegisterSuccess}
+              onError={() => setError("Google login failed")}
+            />
+          </div>
         </form>
       </main>
     </div>

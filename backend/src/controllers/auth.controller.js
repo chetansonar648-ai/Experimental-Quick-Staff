@@ -18,6 +18,8 @@ export const register = async (req, res) => {
       skills = [],
       hourly_rate,
       availability,
+      service_id,
+      services = [],
       google_auth = false,
       googleToken,
       profile_image,
@@ -94,7 +96,7 @@ export const register = async (req, res) => {
       `INSERT INTO users (name, email, password, role, phone, address)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, name, email, role`,
-      [name, email, passwordHash, role, phone, address]
+      [finalName, finalEmail, passwordHash, role, phone || null, address || null]
     );
     const user = userResult.rows[0];
 
@@ -104,6 +106,24 @@ export const register = async (req, res) => {
          VALUES ($1, $2, $3, $4, $5)`,
         [user.id, bio || '', skills, hourly_rate || null, availability || {}]
       );
+
+      const singleServiceId = Number.isInteger(Number(service_id)) ? Number(service_id) : null;
+      const legacyFirstServiceId =
+        !singleServiceId && Array.isArray(services) && services.length
+          ? Number(services[0])
+          : null;
+      const finalServiceId =
+        singleServiceId || (Number.isInteger(legacyFirstServiceId) ? legacyFirstServiceId : null);
+
+      if (finalServiceId) {
+        await clientConn.query(
+          `INSERT INTO worker_services (worker_id, service_id, price)
+           SELECT $1, s.id, COALESCE(s.base_price, 0)
+           FROM services s
+           WHERE s.is_active = TRUE AND s.id = $2`,
+          [user.id, finalServiceId]
+        );
+      }
     }
 
     if (finalProfileImage) {

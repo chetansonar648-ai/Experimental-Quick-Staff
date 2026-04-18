@@ -1,7 +1,9 @@
 import { query } from '../config/db.js';
 
 export const listServices = async (_req, res) => {
-  const services = await query('SELECT * FROM services ORDER BY created_at DESC');
+  const services = await query(
+    'SELECT id, name FROM services WHERE is_active = TRUE ORDER BY name ASC'
+  );
   return res.json(services.rows);
 };
 
@@ -36,7 +38,7 @@ export const addWorkerService = async (req, res) => {
   const sId = services_id || service_id;
   try {
     const result = await query(
-      `INSERT INTO worker_services (worker_id, services_id, price)
+      `INSERT INTO worker_services (worker_id, service_id, price)
        VALUES ($1, $2, $3) RETURNING *`,
       [req.user.id, sId, price]
     );

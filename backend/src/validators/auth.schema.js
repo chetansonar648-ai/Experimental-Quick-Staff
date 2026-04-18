@@ -19,6 +19,11 @@ export const registerSchema = Joi.object({
     skills: Joi.array().items(Joi.string()).optional(),
     hourly_rate: Joi.number().precision(2).optional(),
     availability: Joi.object().unknown(true).optional(),
+    // New worker flow: single service selection
+    service_id: Joi.number().integer().allow(null).optional(),
+
+    // Backwards-compatible: older/newer flows may send an array
+    services: Joi.array().items(Joi.number().integer()).optional(),
   }),
 });
 

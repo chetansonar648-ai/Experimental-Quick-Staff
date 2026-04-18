@@ -1,15 +1,20 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { GoogleLogin } from "@react-oauth/google";
+import { api } from "../services/api.js";
 
 const RegisterWorker = () => {
-  const { register } = useAuth();
+  const { register, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isGoogle = useMemo(
     () => new URLSearchParams(location.search).get("google") === "true",
     [location.search]
   );
+  const [services, setServices] = useState([]);
+  const [selectedService, setSelectedService] = useState("");
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -17,7 +22,6 @@ const RegisterWorker = () => {
     confirmPassword: "",
     phone: "",
     address: "",
-    skills: "",
     hourly_rate: "",
     terms: false,
   });
@@ -42,7 +46,20 @@ const RegisterWorker = () => {
   };
 
   useEffect(() => {
-    if (!isGoogle) return;
+    const role = "worker";
+    const storedRole = localStorage.getItem("googleRole");
+    const hasGoogleDraft =
+      storedRole === role &&
+      Boolean(localStorage.getItem("googleToken")) &&
+      Boolean(localStorage.getItem("googleData"));
+    setIsGoogleUser(hasGoogleDraft);
+  }, []);
+
+  useEffect(() => {
+    const role = location.pathname.includes("worker") ? "worker" : "client";
+    const storedRole = localStorage.getItem("googleRole");
+    if (storedRole && storedRole !== role) return;
+    if (!isGoogle && !storedRole) return;
     const stored = localStorage.getItem("googleData");
     if (!stored) return;
     try {
@@ -52,10 +69,54 @@ const RegisterWorker = () => {
         name: googleData?.name || prev.name,
         email: googleData?.email || prev.email,
       }));
+      if (storedRole === role) setIsGoogleUser(true);
     } catch {
       // Ignore malformed storage payload.
     }
-  }, [isGoogle]);
+  }, [isGoogle, location.pathname]);
+
+  useEffect(() => {
+    api
+      .services()
+      .then((data) => setServices(Array.isArray(data) ? data : []))
+      .catch(() => setServices([]));
+  }, []);
+
+  const handleGoogleRegisterSuccess = async (res) => {
+    setError("");
+    const role = "worker";
+    try {
+      const data = await api.googleAuth(res.credential);
+
+      if (data?.isNewUser) {
+        localStorage.setItem("googleToken", res.credential);
+        localStorage.setItem("googleData", JSON.stringify(data.googleData || {}));
+        localStorage.setItem("googleRole", role);
+        setIsGoogleUser(true);
+        setForm((prev) => ({
+          ...prev,
+          name: data.googleData?.name || prev.name,
+          email: data.googleData?.email || prev.email,
+        }));
+        return;
+      }
+
+      if (!data?.token || !data?.user) {
+        setError("Google login failed");
+        return;
+      }
+
+      if (data.user.role !== role) {
+        setError(`This Google account is registered as a ${data.user.role}.`);
+        return;
+      }
+
+      login(data);
+      navigate("/worker/dashboard");
+    } catch (err) {
+      setError(err.message || "Google login failed");
+    }
+  };
   const clearGoogleAuthData = () => {
     localStorage.removeItem("googleToken");
     localStorage.removeItem("googleData");
@@ -67,7 +128,7 @@ const RegisterWorker = () => {
     e.preventDefault();
     setError("");
 
-    if (!isGoogle && form.password !== form.confirmPassword) {
+    if (!isGoogleUser && form.password !== form.confirmPassword) {
       setError("Passwords do not match");
       return;
     }
@@ -79,25 +140,29 @@ const RegisterWorker = () => {
 
     setLoading(true);
     try {
-      const { confirmPassword, terms, skills, hourly_rate, ...rest } = form;
-      const skillsArray = skills ? skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const { confirmPassword, terms, hourly_rate, ...rest } = form;
       const hourlyRateNum = hourly_rate ? parseFloat(hourly_rate) : null;
-      const googleData = isGoogle ? JSON.parse(localStorage.getItem("googleData") || "{}") : null;
+      const googleData = isGoogleUser ? JSON.parse(localStorage.getItem("googleData") || "{}") : null;
+      const storedGoogleRole = localStorage.getItem("googleRole");
       const payload = {
         ...rest,
-        skills: skillsArray,
         hourly_rate: hourlyRateNum,
         role: "worker",
+        service_id: selectedService ? Number(selectedService) : null,
       };
 
-      if (isGoogle) {
+      if (isGoogleUser || storedGoogleRole === "worker") {
         payload.google_auth = true;
         payload.googleToken = localStorage.getItem("googleToken");
         payload.profile_image = googleData?.picture || null;
+        delete payload.password;
       }
 
       await register(payload);
-      if (isGoogle) clearGoogleAuthData();
+      if (isGoogleUser || storedGoogleRole === "worker") {
+        clearGoogleAuthData();
+        localStorage.removeItem("googleRole");
+      }
       setShowSuccess(true);
     } catch (err) {
       setError(err.message);
@@ -143,7 +208,10 @@ const RegisterWorker = () => {
                 required
                 value={form.name}
                 onChange={onChange}
-                className="h-11 rounded-lg border border-border-light px-3"
+                disabled={isGoogleUser}
+                className={`h-11 rounded-lg border border-border-light px-3 ${
+                  isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 placeholder="Jane Doe"
               />
             </div>
@@ -155,12 +223,14 @@ const RegisterWorker = () => {
                 required
                 value={form.email}
                 onChange={onChange}
-                disabled={isGoogle}
-                className="h-11 rounded-lg border border-border-light px-3"
+                disabled={isGoogleUser}
+                className={`h-11 rounded-lg border border-border-light px-3 ${
+                  isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 placeholder="you@example.com"
               />
             </div>
-            {!isGoogle && (
+            {!isGoogleUser && (
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Password</label>
                 <div className="relative">
@@ -183,7 +253,7 @@ const RegisterWorker = () => {
                 </div>
               </div>
             )}
-            {!isGoogle && (
+            {!isGoogleUser && (
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Confirm Password</label>
                 <div className="relative">
@@ -229,14 +299,19 @@ const RegisterWorker = () => {
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Skills (comma separated)</label>
-              <input
-                name="skills"
-                value={form.skills}
-                onChange={onChange}
-                className="h-11 rounded-lg border border-border-light px-3"
-                placeholder="Bartending, Warehouse"
-              />
+              <label className="text-sm font-medium">Service</label>
+              <select
+                value={selectedService}
+                onChange={(e) => setSelectedService(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select a service</option>
+                {services.map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Hourly Rate (USD)</label>
@@ -264,6 +339,7 @@ const RegisterWorker = () => {
             </label>
           </div>
           {error && <div className="text-sm text-red-600">{error}</div>}
+          
           <button
             type="submit"
             disabled={loading}
@@ -271,6 +347,13 @@ const RegisterWorker = () => {
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
+
+          <div className="mt-4 flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleRegisterSuccess}
+              onError={() => setError("Google login failed")}
+            />
+          </div>
         </form>
       </main>
 
