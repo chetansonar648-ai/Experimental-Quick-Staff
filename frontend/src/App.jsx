@@ -22,6 +22,7 @@ import WorkerProfile from "./pages/worker/Profile.jsx";
 import SavedClients from "./pages/worker/SavedClients.jsx";
 import ClientProfileView from "./pages/worker/ClientProfileView.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import { Analytics } from "@vercel/analytics/react"
 
 // Import Sub-Apps
 import ClientApp from "./apps/client/App.jsx";
