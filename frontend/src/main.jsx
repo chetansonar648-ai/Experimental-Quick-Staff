@@ -6,7 +6,8 @@ import { ToastProvider } from "./context/ToastContext.jsx";
 import "./index.css"; // or "./styles.css" depending on what you're using
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext.jsx';
-
+import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
