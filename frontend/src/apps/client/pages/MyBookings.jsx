@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import defaultWorkerAvatar from "../../../assets/worker_default_avatar.png";
 import { ToastContainer } from "../../../components/Toast";
+import { apiUrl } from "../../../api/base.js";
 
 const tabs = [
   { key: "upcoming", label: "Upcoming Bookings", icon: "event_upcoming" },
@@ -47,7 +48,7 @@ const MyBookings = () => {
 
       const status = statusMap[activeTab];
       if (status) {
-        const response = await fetch(`/api/bookings/client?status=${status}`, {
+        const response = await fetch(apiUrl(`/api/bookings/client?status=${status}`), {
           headers: {
             "Content-Type": "application/json",
             ...(token && { "Authorization": `Bearer ${token}` })
@@ -176,7 +177,7 @@ const UpcomingSection = ({ bookings, loading, onRefresh, addToast }) => {
     if (confirm("Are you sure you want to cancel this booking?")) {
       try {
         const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-        const response = await fetch(`/api/bookings/${bookingId}/status`, {
+        const response = await fetch(apiUrl(`/api/bookings/${bookingId}/status`), {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -483,7 +484,7 @@ const ActiveSection = ({ bookings, loading, onRefresh, addToast }) => {
     if (confirm("Are you sure you want to cancel this booking?")) {
       try {
         const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-        const response = await fetch(`/api/bookings/${bookingId}/status`, {
+        const response = await fetch(apiUrl(`/api/bookings/${bookingId}/status`), {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -621,7 +622,7 @@ const RequestedSection = ({ bookings = [], loading, onRefresh }) => {
     if (confirm("Are you sure you want to withdraw this booking request?")) {
       try {
         const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-        const response = await fetch(`/api/bookings/${bookingId}/status`, {
+        const response = await fetch(apiUrl(`/api/bookings/${bookingId}/status`), {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -1268,7 +1269,7 @@ const RescheduleModal = ({ booking, onClose, onSuccess, addToast }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-      const response = await fetch(`/api/bookings/${booking.id}/reschedule`, {
+      const response = await fetch(apiUrl(`/api/bookings/${booking.id}/reschedule`), {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -1359,7 +1360,7 @@ const ReviewModal = ({ booking, onClose, onSuccess }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-      const response = await fetch(`/api/bookings/${booking.id}/review`, {
+      const response = await fetch(apiUrl(`/api/bookings/${booking.id}/review`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

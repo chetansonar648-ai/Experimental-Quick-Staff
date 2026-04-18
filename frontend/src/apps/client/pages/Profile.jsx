@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import defaultClientAvatar from "../../../assets/client_default_avatar.png";
+import { apiUrl } from "../../../api/base.js";
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -30,7 +31,7 @@ const Profile = () => {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-      const response = await fetch("/api/auth/me", {
+      const response = await fetch(apiUrl("/api/auth/me"), {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -47,7 +48,7 @@ const Profile = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-      const response = await fetch("/api/profile", {
+      const response = await fetch(apiUrl("/api/profile"), {
         method: "PATCH",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -78,7 +79,7 @@ const Profile = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-      const response = await fetch("/api/profile/password", {
+      const response = await fetch(apiUrl("/api/profile/password"), {
         method: "PATCH",
         headers: {
           "Authorization": `Bearer ${token}`,

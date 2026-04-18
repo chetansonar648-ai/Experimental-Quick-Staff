@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import defaultWorkerAvatar from "../../../assets/worker_default_avatar.png";
+import { apiUrl } from "../../../api/base.js";
 
 const BookStep2 = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const BookStep2 = () => {
 
   useEffect(() => {
     if (!worker && workerId) {
-      fetch(`/api/workers/${workerId}`)
+      fetch(apiUrl(`/api/workers/${workerId}`))
         .then(res => res.json())
         .then(data => setWorker(data))
         .catch(err => console.error(err))

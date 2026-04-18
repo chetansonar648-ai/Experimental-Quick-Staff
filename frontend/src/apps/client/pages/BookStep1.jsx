@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import defaultWorkerAvatar from "../../../assets/worker_default_avatar.png";
+import { apiUrl } from "../../../api/base.js";
 
 const BookStep1 = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const BookStep1 = () => {
 
   useEffect(() => {
     if (workerId) {
-      fetch(`/api/workers/${workerId}`)
+      fetch(apiUrl(`/api/workers/${workerId}`))
         .then((res) => {
           if (res.ok) return res.json();
           throw new Error("Failed to fetch worker");
@@ -36,7 +37,7 @@ const BookStep1 = () => {
         });
     } else {
       // Fetch categories if starting fresh
-      fetch("/api/workers/categories/list")
+      fetch(apiUrl("/api/workers/categories/list"))
         .then((res) => res.json())
         .then((data) => setCategories(data))
         .catch((err) => console.error(err))

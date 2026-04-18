@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API } from '../../../api/base.js'
 import './Analytics.css'
 
 const Analytics = () => {
@@ -9,18 +10,16 @@ const Analytics = () => {
   const [trafficStats, setTrafficStats] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-
   useEffect(() => {
     const fetchAllData = async () => {
       try {
         setLoading(true)
         const [resSummary, resMonthly, resServices, resDevices, resTraffic] = await Promise.all([
-          fetch(`${apiBase}/admin/summary`),
-          fetch(`${apiBase}/admin/analytics/monthly`),
-          fetch(`${apiBase}/admin/analytics/top-services`),
-          fetch(`${apiBase}/admin/analytics/devices`),
-          fetch(`${apiBase}/admin/analytics/traffic`)
+          fetch(`${API}/admin/summary`),
+          fetch(`${API}/admin/analytics/monthly`),
+          fetch(`${API}/admin/analytics/top-services`),
+          fetch(`${API}/admin/analytics/devices`),
+          fetch(`${API}/admin/analytics/traffic`)
         ])
 
         if (resSummary.ok) setMetrics(await resSummary.json())

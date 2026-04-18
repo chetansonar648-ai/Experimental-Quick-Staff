@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import defaultWorkerAvatar from "../../../assets/worker_default_avatar.png";
+import { apiUrl } from "../../../api/base.js";
 
 const BrowseStaff = () => {
   const [searchParams] = useSearchParams();
@@ -28,7 +29,7 @@ const BrowseStaff = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch("/api/workers/categories/list");
+      const response = await fetch(apiUrl("/api/workers/categories/list"));
       if (response.ok) {
         const data = await response.json();
         setCategories(data);
@@ -49,7 +50,7 @@ const BrowseStaff = () => {
       if (filters.max_price) params.append("max_price", filters.max_price);
       if (filters.min_rating) params.append("min_rating", filters.min_rating);
 
-      const response = await fetch(`/api/workers?${params.toString()}`);
+      const response = await fetch(apiUrl(`/api/workers?${params.toString()}`));
       if (!response.ok) {
         throw new Error("Failed to fetch staff");
       }
@@ -81,7 +82,7 @@ const BrowseStaff = () => {
         return;
       }
 
-      const response = await fetch(`/api/saved-workers`, {
+      const response = await fetch(apiUrl("/api/saved-workers"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -388,7 +389,7 @@ const WorkerProfileModal = ({ worker, onClose, onBookNow, onSave }) => {
 
   useEffect(() => {
     if (worker && worker.id) {
-      fetch(`/api/workers/${worker.id}`)
+      fetch(apiUrl(`/api/workers/${worker.id}`))
         .then(res => res.json())
         .then(data => setWorkerDetails(data))
         .catch(err => console.error("Error fetching worker details:", err));

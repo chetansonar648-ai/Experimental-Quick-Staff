@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import defaultClientAvatar from "../../../../assets/client_default_avatar.png";
+import { apiUrl } from "../../../../api/base.js";
 
 const pageTitleMap = {
   "/": "Dashboard",
@@ -33,7 +34,7 @@ const Header = () => {
         const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
         if (!token) return;
 
-        const response = await fetch("/api/profile", {
+        const response = await fetch(apiUrl("/api/profile"), {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (response.ok) {

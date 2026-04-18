@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { apiUrl } from '../../api/base.js';
 
 const ClientProfile = () => {
     const { id } = useParams();
@@ -23,7 +24,7 @@ const ClientProfile = () => {
             console.log('Token:', token ? 'Present' : 'Missing');
 
             // Fetch client basic info from users table
-            const response = await fetch(`/api/users/${id}`, {
+            const response = await fetch(apiUrl(`/api/users/${id}`), {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -45,7 +46,7 @@ const ClientProfile = () => {
             // Fetch bookings with this client
             try {
                 console.log('Fetching bookings for client:', id);
-                const bookingsResponse = await fetch(`/api/bookings/client/${id}`, {
+                const bookingsResponse = await fetch(apiUrl(`/api/bookings/client/${id}`), {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'

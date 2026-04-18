@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API } from '../../../api/base.js'
 import './Clients.css'
 
 const Clients = () => {
@@ -9,8 +10,6 @@ const Clients = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '' })
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-
   // --- OPEN ADD CLIENT MODAL ---
   const handleAddClient = () => setShowAddModal(true)
 
@@ -18,7 +17,7 @@ const Clients = () => {
   const toggleClientStatus = async (id, currentStatus) => {
     const isActive = currentStatus !== 'Active'
     try {
-      const res = await fetch(`${apiBase}/users/${id}/status`, {
+      const res = await fetch(`${API}/users/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: isActive })
@@ -38,7 +37,7 @@ const Clients = () => {
     try {
       setLoading(true)
 
-      const res = await fetch(`${apiBase}/users`, {
+      const res = await fetch(`${API}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -83,7 +82,7 @@ const Clients = () => {
   useEffect(() => {
     const loadClients = async () => {
       try {
-        const res = await fetch(`${apiBase}/clients`)
+        const res = await fetch(`${API}/clients`)
         if (!res.ok) throw new Error('Failed to load clients')
 
         const data = await res.json()

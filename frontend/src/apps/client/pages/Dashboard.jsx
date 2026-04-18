@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/client";
+import { apiUrl } from "../../../api/base.js";
 import defaultWorkerAvatar from "../../../assets/worker_default_avatar.png";
 
 const Dashboard = () => {
@@ -24,7 +25,7 @@ const Dashboard = () => {
     try {
       // Fetch booking stats with proper token
       const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-      const statsRes = await fetch("/api/bookings/stats/summary", {
+      const statsRes = await fetch(apiUrl("/api/bookings/stats/summary"), {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -41,7 +42,7 @@ const Dashboard = () => {
 
       // Fetch pending reviews count
       try {
-        const reviewsRes = await fetch("/api/reviews/pending", {
+        const reviewsRes = await fetch(apiUrl("/api/reviews/pending"), {
           headers: {
             "Authorization": `Bearer ${token}`
           }

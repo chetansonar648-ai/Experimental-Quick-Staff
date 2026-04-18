@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { API } from '../../../api/base.js'
 import './Settings.css'
 
 const Settings = () => {
@@ -18,8 +19,6 @@ const Settings = () => {
     joinedDate: '2024-01-15'
   })
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-
   const handleChangePassword = async (e) => {
     e.preventDefault()
 
@@ -34,7 +33,7 @@ const Settings = () => {
 
     try {
       // Using admin user ID = 1
-      const res = await fetch(`${apiBase}/users/1/password`, {
+      const res = await fetch(`${API}/users/1/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: passForm.newPassword })

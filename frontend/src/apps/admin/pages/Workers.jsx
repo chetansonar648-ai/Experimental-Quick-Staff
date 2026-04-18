@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API } from '../../../api/base.js'
 import './Workers.css'
 
 const Workers = () => {
@@ -13,15 +14,13 @@ const Workers = () => {
   const [form, setForm] = useState({ name: '', email: '', phone: '' })
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' })
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-
   /**********************************************
    * LOAD ALL WORKERS (JOIN users + worker_profiles)
    **********************************************/
   const loadWorkers = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${apiBase}/workers`)
+      const res = await fetch(`${API}/workers`)
       if (!res.ok) throw new Error('Failed to fetch workers')
 
       const data = await res.json()
@@ -60,7 +59,7 @@ const Workers = () => {
     try {
       setLoading(true)
 
-      const res = await fetch(`${apiBase}/workers`, {
+      const res = await fetch(`${API}/workers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -99,7 +98,7 @@ const Workers = () => {
 
     try {
       setLoading(true)
-      const res = await fetch(`${apiBase}/workers/${selectedWorker.id}`, {
+      const res = await fetch(`${API}/workers/${selectedWorker.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
@@ -134,7 +133,7 @@ const Workers = () => {
 
     try {
       setLoading(true)
-      const res = await fetch(`${apiBase}/workers/${id}`, { method: 'DELETE' })
+      const res = await fetch(`${API}/workers/${id}`, { method: 'DELETE' })
 
       if (!res.ok) throw new Error('Failed to delete worker')
 
@@ -150,7 +149,7 @@ const Workers = () => {
   const toggleWorkerStatus = async (id, currentStatus) => {
     const isActive = currentStatus !== 'Active'
     try {
-      const res = await fetch(`${apiBase}/users/${id}/status`, {
+      const res = await fetch(`${API}/users/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: isActive })

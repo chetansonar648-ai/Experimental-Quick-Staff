@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API } from '../../../api/base.js'
 import './RatingsReviews.css'
 
 const RatingsReviews = () => {
@@ -13,7 +14,6 @@ const RatingsReviews = () => {
   const [reviews, setReviews] = useState([])
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
   // Modal State
   const [showModal, setShowModal] = useState(false)
@@ -30,7 +30,7 @@ const RatingsReviews = () => {
 
   const fetchBookings = async () => {
     try {
-      const res = await fetch(`${apiBase}/bookings`)
+      const res = await fetch(`${API}/bookings`)
       if (res.ok) {
         const data = await res.json()
         setBookings(data)
@@ -42,7 +42,7 @@ const RatingsReviews = () => {
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch(`${apiBase}/reviews`)
+      const res = await fetch(`${API}/reviews`)
       if (!res.ok) throw new Error('Failed to fetch reviews')
       const data = await res.json()
 
@@ -79,7 +79,7 @@ const RatingsReviews = () => {
         comment: newReview.comment
       }
 
-      const res = await fetch(`${apiBase}/reviews`, {
+      const res = await fetch(`${API}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -106,7 +106,7 @@ const RatingsReviews = () => {
   const handleReject = async (id) => {
     if (!window.confirm('Are you sure you want to reject/delete this review?')) return
     try {
-      const res = await fetch(`${apiBase}/reviews/${id}`, { method: 'DELETE' })
+      const res = await fetch(`${API}/reviews/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete review')
       setReviews(prev => prev.filter(r => r.id !== id))
     } catch (err) {

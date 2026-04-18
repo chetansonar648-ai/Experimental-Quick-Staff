@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { API } from '../../../api/base.js'
 import './Dashboard.css'
 
 const Dashboard = () => {
@@ -14,7 +15,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     // Fetch admin summary
-    fetch('http://localhost:4000/admin/summary')
+    fetch(`${API}/admin/summary`)
       .then(res => res.json())
       .then(data => {
         setStats([
@@ -27,7 +28,7 @@ const Dashboard = () => {
       .catch(err => console.error('Error fetching admin summary:', err))
 
     // Fetch recent activities (latest bookings + reviews)
-    fetch('http://localhost:4000/bookings')
+    fetch(`${API}/bookings`)
       .then(res => res.json())
       .then(bookings => {
         // Take latest 5 bookings as "recent activity"

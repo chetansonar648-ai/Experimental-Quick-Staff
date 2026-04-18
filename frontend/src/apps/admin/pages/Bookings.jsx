@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API } from '../../../api/base.js'
 import './Bookings.css'
 
 const Bookings = () => {
@@ -33,8 +34,6 @@ const Bookings = () => {
   const [dbWorkers, setDbWorkers] = useState([])
   const [services, setServices] = useState([])
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-
   // Initial Data Load
   useEffect(() => {
     fetchSharedData()
@@ -51,9 +50,9 @@ const Bookings = () => {
   const fetchSharedData = async () => {
     try {
       const [resClients, resWorkers, resServices] = await Promise.all([
-        fetch(`${apiBase}/clients`),
-        fetch(`${apiBase}/workers`),
-        fetch(`${apiBase}/services`)
+        fetch(`${API}/clients`),
+        fetch(`${API}/workers`),
+        fetch(`${API}/services`)
       ])
       if (resClients.ok) setClients(await resClients.json())
       if (resWorkers.ok) setDbWorkers(await resWorkers.json())
@@ -66,7 +65,7 @@ const Bookings = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${apiBase}/bookings`)
+      const res = await fetch(`${API}/bookings`)
       if (!res.ok) throw new Error('Failed to fetch bookings')
       const data = await res.json()
       setBookings(formatBookings(data))
@@ -85,7 +84,7 @@ const Bookings = () => {
       if (reqStartDate) params.append('startDate', reqStartDate)
       if (reqEndDate) params.append('endDate', reqEndDate)
 
-      const res = await fetch(`${apiBase}/requests?${params.toString()}`)
+      const res = await fetch(`${API}/requests?${params.toString()}`)
       const data = await res.json()
       setRequests(data)
     } catch (err) {
@@ -115,7 +114,7 @@ const Bookings = () => {
     e.preventDefault()
     try {
       setLoading(true)
-      const res = await fetch(`${apiBase}/bookings`, {
+      const res = await fetch(`${API}/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -132,7 +131,7 @@ const Bookings = () => {
   }
   const handleCancelBooking = async (id) => {
     if (!confirm("Delete this booking?")) return
-    await fetch(`${apiBase}/bookings/${id}`, { method: 'DELETE' })
+    await fetch(`${API}/bookings/${id}`, { method: 'DELETE' })
     setBookings(prev => prev.filter(b => b.id !== id))
   }
   const handleEditBooking = (id) => {
@@ -141,7 +140,7 @@ const Bookings = () => {
     if (s && s !== b.status) updateBookingStatus(id, s)
   }
   const updateBookingStatus = async (id, status) => {
-    await fetch(`${apiBase}/bookings/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+    await fetch(`${API}/bookings/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b))
   }
   const filteredBookings = bookings.filter(b =>
@@ -153,7 +152,7 @@ const Bookings = () => {
   const handleReqCreate = async (e) => {
     e.preventDefault()
     try {
-      const res = await fetch(`${apiBase}/requests`, {
+      const res = await fetch(`${API}/requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reqForm)
@@ -169,7 +168,7 @@ const Bookings = () => {
 
   const handleReqAction = async (id, status) => {
     if (!confirm(`Mark request as ${status}?`)) return
-    const res = await fetch(`${apiBase}/requests/${id}`, {
+    const res = await fetch(`${API}/requests/${id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status })
     })
     if (res.ok) {
@@ -181,7 +180,7 @@ const Bookings = () => {
   const handleReqDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this request? This action cannot be undone.")) return
     try {
-      const res = await fetch(`${apiBase}/requests/${id}`, { method: 'DELETE' })
+      const res = await fetch(`${API}/requests/${id}`, { method: 'DELETE' })
       if (res.ok) {
         alert("Request deleted successfully!")
         fetchRequests()

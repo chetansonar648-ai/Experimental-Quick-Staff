@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import WorkerLayout from '../../components/WorkerLayout';
 import { fetchWorkerMe, updateWorkerProfile, fetchServiceNames, uploadProfilePicture, changePassword } from '../../api/client';
+import { API } from '../../api/base.js';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -220,7 +221,7 @@ const WorkerProfile = () => {
     if (profile.profile_picture) {
       // If it starts with /uploads, prepend the API base URL
       if (profile.profile_picture.startsWith('/uploads')) {
-        return `http://localhost:4001${profile.profile_picture}`;
+        return `${API}${profile.profile_picture}`;
       }
       return profile.profile_picture;
     }

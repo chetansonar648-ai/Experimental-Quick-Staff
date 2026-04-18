@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import defaultWorkerAvatar from "../../../assets/worker_default_avatar.png";
+import { apiUrl } from "../../../api/base.js";
 
 const BookStep3 = () => {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ const BookStep3 = () => {
 
       const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
 
-      const response = await fetch("/api/bookings", {
+      const response = await fetch(apiUrl("/api/bookings"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

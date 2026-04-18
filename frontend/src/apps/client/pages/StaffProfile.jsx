@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import defaultClientAvatar from "../../../assets/client_default_avatar.png";
 import defaultWorkerAvatar from "../../../assets/worker_default_avatar.png";
+import { apiUrl } from "../../../api/base.js";
 
 const StaffProfile = () => {
   const { id } = useParams();
@@ -20,7 +21,7 @@ const StaffProfile = () => {
     const fetchWorkerDetails = async () => {
       try {
         const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-        const response = await fetch(`/api/workers/${id}`, {
+        const response = await fetch(apiUrl(`/api/workers/${id}`), {
           headers: {
             "Content-Type": "application/json",
             ...(token && { "Authorization": `Bearer ${token}` })
@@ -54,7 +55,7 @@ const StaffProfile = () => {
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/saved-workers`, {
+      const response = await fetch(apiUrl("/api/saved-workers"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

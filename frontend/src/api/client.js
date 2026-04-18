@@ -1,8 +1,8 @@
 import axios from "axios";
+import { API } from "./base.js";
 
-// Use "/api" base - Vite proxy will forward to backend
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: `${API}/api`,
   withCredentials: true,
 });
 

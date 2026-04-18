@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import defaultWorkerAvatar from "../../../assets/worker_default_avatar.png";
+import { apiUrl } from "../../../api/base.js";
 
 const SavedWorkers = () => {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ const SavedWorkers = () => {
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
       const params = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : "";
-      const response = await fetch(`/api/saved-workers${params}`, {
+      const response = await fetch(apiUrl(`/api/saved-workers${params}`), {
         headers: {
           "Content-Type": "application/json",
           ...(token && { "Authorization": `Bearer ${token}` })
@@ -38,7 +39,7 @@ const SavedWorkers = () => {
     if (confirm("Remove this worker from your saved list?")) {
       try {
         const token = localStorage.getItem('token') || localStorage.getItem('qs_token');
-        const response = await fetch(`/api/saved-workers/${workerId}`, {
+        const response = await fetch(apiUrl(`/api/saved-workers/${workerId}`), {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { apiUrl } from "../../../api/base.js";
 
 const PaymentsHistory = () => {
   const [rows, setRows] = useState([]);
@@ -36,7 +37,7 @@ const PaymentsHistory = () => {
       if (filters.status !== "all") params.append("status", filters.status);
       if (filters.dateRange) params.append("dateRange", filters.dateRange);
 
-      const response = await fetch(`/api/payments/history?${params.toString()}`, {
+      const response = await fetch(apiUrl(`/api/payments/history?${params.toString()}`), {
         headers: { "x-user-id": userId }
       });
       if (response.ok) {
@@ -65,7 +66,7 @@ const PaymentsHistory = () => {
   const handleViewReceipt = async (paymentId) => {
     try {
       const userId = "mock-user-id";
-      const response = await fetch(`/api/payments/${paymentId}/receipt`, {
+      const response = await fetch(apiUrl(`/api/payments/${paymentId}/receipt`), {
         headers: { "x-user-id": userId }
       });
       if (response.ok) {

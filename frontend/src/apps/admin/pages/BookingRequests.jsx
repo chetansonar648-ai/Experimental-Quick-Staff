@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API } from '../../../api/base.js'
 import './BookingRequests.css'
 
 const BookingRequests = () => {
@@ -38,7 +39,7 @@ const BookingRequests = () => {
             if (startDate) params.append('startDate', startDate)
             if (endDate) params.append('endDate', endDate)
 
-            const res = await fetch(`http://localhost:4000/requests?${params.toString()}`)
+            const res = await fetch(`${API}/requests?${params.toString()}`)
             const data = await res.json()
             setRequests(data)
         } catch (error) {
@@ -53,9 +54,9 @@ const BookingRequests = () => {
         try {
             // Parallel fetches for dropdowns
             const [cRes, wRes, sRes] = await Promise.all([
-                fetch('http://localhost:4000/clients'),
-                fetch('http://localhost:4000/workers'),
-                fetch('http://localhost:4000/services')
+                fetch(`${API}/clients`),
+                fetch(`${API}/workers`),
+                fetch(`${API}/services`)
             ])
             setClients(await cRes.json())
             setWorkers(await wRes.json())
@@ -69,7 +70,7 @@ const BookingRequests = () => {
         if (!window.confirm(`Are you sure you want to ${status} this request?`)) return
 
         try {
-            const res = await fetch(`http://localhost:4000/requests/${id}`, {
+            const res = await fetch(`${API}/requests/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
@@ -88,7 +89,7 @@ const BookingRequests = () => {
     const handleCreate = async (e) => {
         e.preventDefault()
         try {
-            const res = await fetch('http://localhost:4000/requests', {
+            const res = await fetch(`${API}/requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
