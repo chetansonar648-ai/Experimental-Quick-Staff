@@ -329,13 +329,13 @@ const WorkerProfile = () => {
                 />
               </div>
               <div className="flex items-end">
-                <button
+                 {/* <button
                   onClick={() => setShowPasswordModal(true)}
                   className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1"
                 >
                   <span className="material-icons text-base">lock</span>
                   Change Password
-                </button>
+                </button>   */}
               </div>
             </div>
           </div>
