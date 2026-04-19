@@ -130,7 +130,7 @@ const Analytics = () => {
         </div>
       </div>
 
-      <div className="analytics-grid">
+      {/* <div className="analytics-grid">
         <div className="analytics-card">
           <h3>Traffic Sources (Estimated)</h3>
           <div className="traffic-sources">
@@ -162,7 +162,7 @@ const Analytics = () => {
             ))}
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }
