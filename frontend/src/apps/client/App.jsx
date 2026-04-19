@@ -26,26 +26,28 @@ const Placeholder = ({ label }) => {
 
 const App = () => {
   return (
-    <div className="relative flex h-screen min-h-screen w-full flex-col overflow-hidden">
-      <div className="flex h-full w-full">
+    <div className="relative flex h-screen min-h-0 w-full flex-col overflow-hidden">
+      <div className="flex h-full min-h-0 w-full">
         <Sidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:ml-64">
           <Header />
-          <Routes>
-            <Route index element={<Dashboard />} />
-            <Route path="browse-staff" element={<BrowseStaff />} />
-            <Route path="bookings" element={<MyBookings />} />
-            <Route path="saved-workers" element={<SavedWorkers />} />
-            <Route path="saved-workers" element={<SavedWorkers />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="staff/:id" element={<StaffProfile />} />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <Routes>
+              <Route index element={<Dashboard />} />
+              <Route path="browse-staff" element={<BrowseStaff />} />
+              <Route path="bookings" element={<MyBookings />} />
+              <Route path="saved-workers" element={<SavedWorkers />} />
+              <Route path="saved-workers" element={<SavedWorkers />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="staff/:id" element={<StaffProfile />} />
 
-            <Route path="book/step-1" element={<BookStep1 />} />
-            <Route path="book/step-2" element={<BookStep2 />} />
-            <Route path="book/step-3" element={<BookStep3 />} />
-            <Route path="book/confirm" element={<BookConfirm />} />
-            <Route path="*" element={<Navigate to="" replace />} />
-          </Routes>
+              <Route path="book/step-1" element={<BookStep1 />} />
+              <Route path="book/step-2" element={<BookStep2 />} />
+              <Route path="book/step-3" element={<BookStep3 />} />
+              <Route path="book/confirm" element={<BookConfirm />} />
+              <Route path="*" element={<Navigate to="" replace />} />
+            </Routes>
+          </div>
         </div>
       </div>
     </div>

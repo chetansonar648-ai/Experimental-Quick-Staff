@@ -101,12 +101,6 @@ export const register = async (req, res) => {
     const user = userResult.rows[0];
 
     if (role === 'worker') {
-      await clientConn.query(
-        `INSERT INTO worker_profiles (user_id, bio, skills, hourly_rate, availability)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [user.id, bio || '', skills, hourly_rate || null, availability || {}]
-      );
-
       const singleServiceId = Number.isInteger(Number(service_id)) ? Number(service_id) : null;
       const legacyFirstServiceId =
         !singleServiceId && Array.isArray(services) && services.length
@@ -114,6 +108,23 @@ export const register = async (req, res) => {
           : null;
       const finalServiceId =
         singleServiceId || (Number.isInteger(legacyFirstServiceId) ? legacyFirstServiceId : null);
+
+      let profileTitle = null;
+      if (finalServiceId) {
+        const svcRow = await clientConn.query(
+          `SELECT name FROM services WHERE id = $1 AND is_active = TRUE`,
+          [finalServiceId]
+        );
+        if (svcRow.rows[0]?.name) {
+          profileTitle = svcRow.rows[0].name;
+        }
+      }
+
+      await clientConn.query(
+        `INSERT INTO worker_profiles (user_id, bio, skills, hourly_rate, availability, title)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [user.id, bio || '', skills, hourly_rate || null, availability || {}, profileTitle]
+      );
 
       if (finalServiceId) {
         await clientConn.query(

@@ -54,7 +54,7 @@ const WorkerProfile = () => {
             name: profileData.name || '',
             email: profileData.email || '',
             phone: profileData.phone || '',
-            title: profileData.title || '',
+            title: profileData.title || profileData.role || '',
             years_of_experience: profileData.years_of_experience || '',
             bio: profileData.bio || '',
             address: profileData.address || '',

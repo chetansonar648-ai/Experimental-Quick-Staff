@@ -63,6 +63,7 @@ export const getWorkerProfile = async (req, res, next) => {
     const result = await query(
       `SELECT u.id, u.name, u.email, u.phone, u.address,
               COALESCE(u.profile_image, 'https://via.placeholder.com/300x200?text=Worker') as image_url,
+              wp.title,
               COALESCE(wp.title, 'Service Professional') as role,
               wp.bio as description, wp.bio,
               wp.skills,

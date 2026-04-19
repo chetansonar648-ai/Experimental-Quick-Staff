@@ -9,7 +9,7 @@ const Sidebar = () => {
   const { logout } = useAuth();
 
   return (
-    <aside className="w-64 flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
+    <aside className="fixed left-0 top-0 z-30 hidden h-screen w-64 flex-col overflow-hidden border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 md:flex">
       <div className="flex items-center gap-4 text-gray-900 dark:text-white px-6 h-16 border-b border-gray-200 dark:border-gray-800">
         <div className="size-6 text-primary">
           <span className="material-symbols-outlined text-3xl">hub</span>

@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { GoogleLogin } from "@react-oauth/google";
 import { api } from "../services/api.js";
+import { validateBaseFields, validateWorkerFields } from "../utils/registrationValidation.js";
 
 const RegisterWorker = () => {
   const { register, login } = useAuth();
@@ -26,6 +27,7 @@ const RegisterWorker = () => {
     terms: false,
   });
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -48,20 +50,11 @@ const RegisterWorker = () => {
   useEffect(() => {
     const role = "worker";
     const storedRole = localStorage.getItem("googleRole");
-    const hasGoogleDraft =
-      storedRole === role &&
-      Boolean(localStorage.getItem("googleToken")) &&
-      Boolean(localStorage.getItem("googleData"));
-    setIsGoogleUser(hasGoogleDraft);
-  }, []);
-
-  useEffect(() => {
-    const role = location.pathname.includes("worker") ? "worker" : "client";
-    const storedRole = localStorage.getItem("googleRole");
     if (storedRole && storedRole !== role) return;
     if (!isGoogle && !storedRole) return;
+    const token = localStorage.getItem("googleToken");
     const stored = localStorage.getItem("googleData");
-    if (!stored) return;
+    if (!token || !stored) return;
     try {
       const googleData = JSON.parse(stored);
       setForm((prev) => ({
@@ -69,7 +62,7 @@ const RegisterWorker = () => {
         name: googleData?.name || prev.name,
         email: googleData?.email || prev.email,
       }));
-      if (storedRole === role) setIsGoogleUser(true);
+      if (storedRole === role || (isGoogle && token)) setIsGoogleUser(true);
     } catch {
       // Ignore malformed storage payload.
     }
@@ -120,32 +113,38 @@ const RegisterWorker = () => {
   const clearGoogleAuthData = () => {
     localStorage.removeItem("googleToken");
     localStorage.removeItem("googleData");
+    localStorage.removeItem("googleRole");
   };
 
-  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const onChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const next = type === "checkbox" ? checked : value;
+    setForm((prev) => ({ ...prev, [name]: next }));
+    if (fieldErrors[name]) setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (!isGoogleUser && form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
+    const baseErr = validateBaseFields(form, isGoogleUser);
+    const workerErr = validateWorkerFields(form, selectedService);
+    const merged = { ...baseErr, ...workerErr };
+    if (Object.keys(merged).length) {
+      setFieldErrors(merged);
       return;
     }
-
-    if (!form.terms) {
-      setError("Please agree to the Terms and Conditions");
-      return;
-    }
+    setFieldErrors({});
 
     setLoading(true);
     try {
       const { confirmPassword, terms, hourly_rate, ...rest } = form;
-      const hourlyRateNum = hourly_rate ? parseFloat(hourly_rate) : null;
+      const phoneDigits = String(form.phone || "").replace(/\D/g, "").slice(0, 10);
+      const hourlyRateNum = hourly_rate === "" || hourly_rate == null ? null : parseFloat(hourly_rate);
       const googleData = isGoogleUser ? JSON.parse(localStorage.getItem("googleData") || "{}") : null;
       const storedGoogleRole = localStorage.getItem("googleRole");
       const payload = {
         ...rest,
+        phone: phoneDigits,
         hourly_rate: hourlyRateNum,
         role: "worker",
         service_id: selectedService ? Number(selectedService) : null,
@@ -161,7 +160,6 @@ const RegisterWorker = () => {
       await register(payload);
       if (isGoogleUser || storedGoogleRole === "worker") {
         clearGoogleAuthData();
-        localStorage.removeItem("googleRole");
       }
       setShowSuccess(true);
     } catch (err) {
@@ -199,36 +197,37 @@ const RegisterWorker = () => {
           <p className="text-3xl font-black">Register as Gig Worker</p>
           <p className="text-subtle-light">Showcase your skills and get hired fast.</p>
         </div>
-        <form onSubmit={onSubmit} className="w-full max-w-3xl bg-white border border-gray-200 rounded-xl p-8 space-y-4">
+        <form noValidate onSubmit={onSubmit} className="w-full max-w-3xl bg-white border border-gray-200 rounded-xl p-8 space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Full Name</label>
               <input
                 name="name"
-                required
                 value={form.name}
                 onChange={onChange}
                 disabled={isGoogleUser}
                 className={`h-11 rounded-lg border border-border-light px-3 ${
-                  isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""
-                }`}
+                  fieldErrors.name ? "border-red-500" : ""
+                } ${isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 placeholder="Jane Doe"
               />
+              {fieldErrors.name && <p className="text-sm text-red-600">{fieldErrors.name}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Email</label>
               <input
                 name="email"
                 type="email"
-                required
+                autoComplete="email"
                 value={form.email}
                 onChange={onChange}
                 disabled={isGoogleUser}
                 className={`h-11 rounded-lg border border-border-light px-3 ${
-                  isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""
-                }`}
+                  fieldErrors.email ? "border-red-500" : ""
+                } ${isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 placeholder="you@example.com"
               />
+              {fieldErrors.email && <p className="text-sm text-red-600">{fieldErrors.email}</p>}
             </div>
             {!isGoogleUser && (
               <div className="flex flex-col gap-2">
@@ -237,10 +236,12 @@ const RegisterWorker = () => {
                   <input
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    required
+                    autoComplete="new-password"
                     value={form.password}
                     onChange={onChange}
-                    className="h-11 w-full rounded-lg border border-border-light px-3 pr-10"
+                    className={`h-11 w-full rounded-lg border border-border-light px-3 pr-10 ${
+                      fieldErrors.password ? "border-red-500" : ""
+                    }`}
                     placeholder="Create a strong password"
                   />
                   <button
@@ -251,6 +252,7 @@ const RegisterWorker = () => {
                     <span className="material-symbols-outlined text-base">visibility</span>
                   </button>
                 </div>
+                {fieldErrors.password && <p className="text-sm text-red-600">{fieldErrors.password}</p>}
               </div>
             )}
             {!isGoogleUser && (
@@ -260,10 +262,12 @@ const RegisterWorker = () => {
                   <input
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    required
+                    autoComplete="new-password"
                     value={form.confirmPassword}
                     onChange={onChange}
-                    className="h-11 w-full rounded-lg border border-border-light px-3 pr-10"
+                    className={`h-11 w-full rounded-lg border border-border-light px-3 pr-10 ${
+                      fieldErrors.confirmPassword ? "border-red-500" : ""
+                    }`}
                     placeholder="Repeat your password"
                   />
                   <button
@@ -274,17 +278,25 @@ const RegisterWorker = () => {
                     <span className="material-symbols-outlined text-base">visibility</span>
                   </button>
                 </div>
+                {fieldErrors.confirmPassword && (
+                  <p className="text-sm text-red-600">{fieldErrors.confirmPassword}</p>
+                )}
               </div>
             )}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Phone</label>
               <input
                 name="phone"
+                inputMode="numeric"
+                autoComplete="tel"
                 value={form.phone}
                 onChange={onChange}
-                className="h-11 rounded-lg border border-border-light px-3"
-                placeholder="(555) 555-5555"
+                className={`h-11 rounded-lg border border-border-light px-3 ${
+                  fieldErrors.phone ? "border-red-500" : ""
+                }`}
+                placeholder="10-digit mobile number"
               />
+              {fieldErrors.phone && <p className="text-sm text-red-600">{fieldErrors.phone}</p>}
             </div>
           </div>
           <div className="flex flex-col gap-2">
@@ -293,17 +305,25 @@ const RegisterWorker = () => {
               name="address"
               value={form.address}
               onChange={onChange}
-              className="rounded-lg border border-border-light px-3 py-2"
+              className={`rounded-lg border border-border-light px-3 py-2 ${
+                fieldErrors.address ? "border-red-500" : ""
+              }`}
               placeholder="Street, City, State"
             />
+            {fieldErrors.address && <p className="text-sm text-red-600">{fieldErrors.address}</p>}
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Service</label>
               <select
                 value={selectedService}
-                onChange={(e) => setSelectedService(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  setSelectedService(e.target.value);
+                  if (fieldErrors.service) setFieldErrors((prev) => ({ ...prev, service: undefined }));
+                }}
+                className={`w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-500 ${
+                  fieldErrors.service ? "border-red-500" : "border-gray-200"
+                }`}
               >
                 <option value="">Select a service</option>
                 {services.map((service) => (
@@ -312,31 +332,40 @@ const RegisterWorker = () => {
                   </option>
                 ))}
               </select>
+              {fieldErrors.service && <p className="text-sm text-red-600">{fieldErrors.service}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Hourly Rate (USD)</label>
               <input
                 name="hourly_rate"
+                inputMode="decimal"
                 value={form.hourly_rate}
                 onChange={onChange}
-                className="h-11 rounded-lg border border-border-light px-3"
+                className={`h-11 rounded-lg border border-border-light px-3 ${
+                  fieldErrors.hourly_rate ? "border-red-500" : ""
+                }`}
                 placeholder="25"
               />
+              {fieldErrors.hourly_rate && (
+                <p className="text-sm text-red-600">{fieldErrors.hourly_rate}</p>
+              )}
             </div>
           </div>
-          <div className="flex items-start gap-x-2">
-            <input
-              type="checkbox"
-              name="terms"
-              checked={form.terms}
-              onChange={(e) => setForm({ ...form, terms: e.target.checked })}
-              className="h-4 w-4 rounded border-border-light bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-1 focus:ring-offset-1 focus:ring-primary mt-0.5"
-              required
-            />
-            <label className="text-sm font-normal text-text-light dark:text-text-dark">
-              I agree to the <Link className="font-medium text-primary hover:underline" to="/terms-of-service">Terms & Conditions</Link> and{" "}
-              <Link className="font-medium text-primary hover:underline" to="/privacy-policy">Privacy Policy</Link>.
-            </label>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-start gap-x-2">
+              <input
+                type="checkbox"
+                name="terms"
+                checked={form.terms}
+                onChange={onChange}
+                className="mt-0.5 h-4 w-4 rounded border-border-light bg-transparent text-primary checked:border-primary checked:bg-primary focus:ring-1 focus:ring-primary focus:ring-offset-1"
+              />
+              <label className="text-sm font-normal text-text-light dark:text-text-dark">
+                I agree to the <Link className="font-medium text-primary hover:underline" to="/terms-of-service">Terms & Conditions</Link> and{" "}
+                <Link className="font-medium text-primary hover:underline" to="/privacy-policy">Privacy Policy</Link>.
+              </label>
+            </div>
+            {fieldErrors.terms && <p className="text-sm text-red-600">{fieldErrors.terms}</p>}
           </div>
           {error && <div className="text-sm text-red-600">{error}</div>}
           

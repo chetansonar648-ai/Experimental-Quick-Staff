@@ -74,6 +74,7 @@ const Login = () => {
 
   const selectRole = (role) => {
     setShowRoleModal(false);
+    localStorage.setItem("googleRole", role);
     if (role === "client") {
       navigate("/register/client?google=true");
     } else {

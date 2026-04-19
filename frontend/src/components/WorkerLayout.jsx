@@ -6,7 +6,7 @@ const WorkerLayout = ({ children }) => {
   const { user, logout } = useAuth();
   return (
     <div className="bg-background-light text-[#111618] min-h-screen flex">
-      <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col">
+      <aside className="fixed left-0 top-0 z-30 hidden h-screen w-64 flex-col overflow-hidden border-r border-gray-200 bg-white md:flex">
         <Link to="/" className="flex items-center gap-3 p-6 border-b border-gray-200">
           <div className="size-8 text-primary">
             <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -48,7 +48,7 @@ const WorkerLayout = ({ children }) => {
           </button>
         </div>
       </aside>
-      <div className="flex-1 flex flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:ml-64">
         <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
           <Link to="/" className="flex items-center gap-3">
             <div className="size-6 text-primary">
@@ -64,7 +64,7 @@ const WorkerLayout = ({ children }) => {
             <h2 className="font-bold">Quick Staff</h2>
           </Link>
         </header>
-        <main className="flex-1 px-4 sm:px-6 lg:px-10 py-8 bg-background-light">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto bg-background-light px-4 py-8 sm:px-6 lg:px-10">{children}</main>
       </div>
     </div>
   );
