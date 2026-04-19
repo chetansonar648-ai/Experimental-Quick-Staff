@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { GoogleLogin } from "@react-oauth/google";
 import { api } from "../services/api.js";
+import { validateBaseFields } from "../utils/registrationValidation.js";
 
 const RegisterClient = () => {
   const { register, login } = useAuth();
@@ -15,6 +16,7 @@ const RegisterClient = () => {
   const [isGoogleUser, setIsGoogleUser] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "", address: "", terms: false });
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -22,20 +24,11 @@ const RegisterClient = () => {
   useEffect(() => {
     const role = "client";
     const storedRole = localStorage.getItem("googleRole");
-    const hasGoogleDraft =
-      storedRole === role &&
-      Boolean(localStorage.getItem("googleToken")) &&
-      Boolean(localStorage.getItem("googleData"));
-    setIsGoogleUser(hasGoogleDraft);
-  }, []);
-
-  useEffect(() => {
-    const role = location.pathname.includes("worker") ? "worker" : "client";
-    const storedRole = localStorage.getItem("googleRole");
     if (storedRole && storedRole !== role) return;
     if (!isGoogle && !storedRole) return;
+    const token = localStorage.getItem("googleToken");
     const stored = localStorage.getItem("googleData");
-    if (!stored) return;
+    if (!token || !stored) return;
     try {
       const googleData = JSON.parse(stored);
       setForm((prev) => ({
@@ -43,7 +36,7 @@ const RegisterClient = () => {
         name: googleData?.name || prev.name,
         email: googleData?.email || prev.email,
       }));
-      if (storedRole === role) setIsGoogleUser(true);
+      if (storedRole === role || (isGoogle && token)) setIsGoogleUser(true);
     } catch {
       // Ignore malformed storage payload.
     }
@@ -86,29 +79,32 @@ const RegisterClient = () => {
     }
   };
 
-  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const onChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const next = type === "checkbox" ? checked : value;
+    setForm((prev) => ({ ...prev, [name]: next }));
+    if (fieldErrors[name]) setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (!isGoogleUser && form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
+    const merged = validateBaseFields(form, isGoogleUser);
+    if (Object.keys(merged).length) {
+      setFieldErrors(merged);
       return;
     }
-
-    if (!form.terms) {
-      setError("Please agree to the Terms and Conditions");
-      return;
-    }
+    setFieldErrors({});
 
     setLoading(true);
     try {
       const { confirmPassword, terms, ...registerData } = form;
+      const phoneDigits = String(form.phone || "").replace(/\D/g, "").slice(0, 10);
       const googleData = isGoogleUser ? JSON.parse(localStorage.getItem("googleData") || "{}") : null;
       const storedGoogleRole = localStorage.getItem("googleRole");
       const payload = {
         ...registerData,
+        phone: phoneDigits,
         role: "client",
       };
 
@@ -116,7 +112,6 @@ const RegisterClient = () => {
         payload.google_auth = true;
         payload.googleToken = localStorage.getItem("googleToken");
         payload.profile_image = googleData?.picture || null;
-        // Ensure we don't accidentally send password fields for Google users
         delete payload.password;
       }
 
@@ -164,36 +159,37 @@ const RegisterClient = () => {
           <p className="text-3xl font-black">Register as Client</p>
           <p className="text-subtle-light">Post jobs and hire top talent fast.</p>
         </div>
-        <form onSubmit={onSubmit} className="w-full max-w-xl bg-white border border-gray-200 rounded-xl p-8 space-y-4">
+        <form noValidate onSubmit={onSubmit} className="w-full max-w-xl bg-white border border-gray-200 rounded-xl p-8 space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Full Name</label>
               <input
                 name="name"
-                required
                 value={form.name}
                 onChange={onChange}
                 disabled={isGoogleUser}
                 className={`h-11 rounded-lg border border-border-light px-3 ${
-                  isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""
-                }`}
+                  fieldErrors.name ? "border-red-500" : ""
+                } ${isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 placeholder="Jane Doe"
               />
+              {fieldErrors.name && <p className="text-sm text-red-600">{fieldErrors.name}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Email</label>
               <input
                 name="email"
                 type="email"
-                required
+                autoComplete="email"
                 value={form.email}
                 onChange={onChange}
                 disabled={isGoogleUser}
                 className={`h-11 rounded-lg border border-border-light px-3 ${
-                  isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""
-                }`}
+                  fieldErrors.email ? "border-red-500" : ""
+                } ${isGoogleUser ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 placeholder="you@example.com"
               />
+              {fieldErrors.email && <p className="text-sm text-red-600">{fieldErrors.email}</p>}
             </div>
             {!isGoogleUser && (
               <div className="flex flex-col gap-2">
@@ -202,10 +198,12 @@ const RegisterClient = () => {
                   <input
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    required
+                    autoComplete="new-password"
                     value={form.password}
                     onChange={onChange}
-                    className="h-11 w-full rounded-lg border border-border-light px-3 pr-10"
+                    className={`h-11 w-full rounded-lg border border-border-light px-3 pr-10 ${
+                      fieldErrors.password ? "border-red-500" : ""
+                    }`}
                     placeholder="Create a password"
                   />
                   <button
@@ -216,6 +214,7 @@ const RegisterClient = () => {
                     <span className="material-symbols-outlined text-base">visibility</span>
                   </button>
                 </div>
+                {fieldErrors.password && <p className="text-sm text-red-600">{fieldErrors.password}</p>}
               </div>
             )}
             {!isGoogleUser && (
@@ -225,10 +224,12 @@ const RegisterClient = () => {
                   <input
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    required
+                    autoComplete="new-password"
                     value={form.confirmPassword}
                     onChange={onChange}
-                    className="h-11 w-full rounded-lg border border-border-light px-3 pr-10"
+                    className={`h-11 w-full rounded-lg border border-border-light px-3 pr-10 ${
+                      fieldErrors.confirmPassword ? "border-red-500" : ""
+                    }`}
                     placeholder="Confirm your password"
                   />
                   <button
@@ -239,17 +240,25 @@ const RegisterClient = () => {
                     <span className="material-symbols-outlined text-base">visibility</span>
                   </button>
                 </div>
+                {fieldErrors.confirmPassword && (
+                  <p className="text-sm text-red-600">{fieldErrors.confirmPassword}</p>
+                )}
               </div>
             )}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Phone</label>
               <input
                 name="phone"
+                inputMode="numeric"
+                autoComplete="tel"
                 value={form.phone}
                 onChange={onChange}
-                className="h-11 rounded-lg border border-border-light px-3"
-                placeholder="(555) 555-5555"
+                className={`h-11 rounded-lg border border-border-light px-3 ${
+                  fieldErrors.phone ? "border-red-500" : ""
+                }`}
+                placeholder="10-digit mobile number"
               />
+              {fieldErrors.phone && <p className="text-sm text-red-600">{fieldErrors.phone}</p>}
             </div>
           </div>
           <div className="flex flex-col gap-2">
@@ -258,32 +267,32 @@ const RegisterClient = () => {
               name="address"
               value={form.address}
               onChange={onChange}
-              className="rounded-lg border border-border-light px-3 py-2"
+              className={`rounded-lg border border-border-light px-3 py-2 ${
+                fieldErrors.address ? "border-red-500" : ""
+              }`}
               placeholder="Street, City, State"
             />
+            {fieldErrors.address && <p className="text-sm text-red-600">{fieldErrors.address}</p>}
           </div>
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              name="terms"
-              checked={form.terms}
-              onChange={(e) => setForm({ ...form, terms: e.target.checked })}
-              className="h-4 w-4 rounded border-border-light text-primary focus:ring-primary"
-              required
-            />
-            <label className="ml-2 block text-sm text-neutral-subtle">
-              I agree to the{" "}
-              <Link className="font-medium text-primary hover:text-primary/90" to="/terms-of-service">Terms and Conditions</Link> and{" "}
-              <Link className="font-medium text-primary hover:text-primary/90" to="/privacy-policy">Privacy Policy</Link>
-            </label>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="terms"
+                checked={form.terms}
+                onChange={onChange}
+                className="h-4 w-4 rounded border-border-light text-primary focus:ring-primary"
+              />
+              <label className="ml-2 block text-sm text-neutral-subtle">
+                I agree to the{" "}
+                <Link className="font-medium text-primary hover:text-primary/90" to="/terms-of-service">Terms and Conditions</Link> and{" "}
+                <Link className="font-medium text-primary hover:text-primary/90" to="/privacy-policy">Privacy Policy</Link>
+              </label>
+            </div>
+            {fieldErrors.terms && <p className="text-sm text-red-600">{fieldErrors.terms}</p>}
           </div>
           {error && <div className="text-sm text-red-600">{error}</div>}
-          {/* <div className="mt-4 flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleRegisterSuccess}
-              onError={() => setError("Google login failed")}
-            />
-          </div> */}
+         
           <button
             type="submit"
             disabled={loading}
