@@ -34,6 +34,8 @@ const Settings = () => {
     }
   }, [profile])
 
+  console.log('TOKEN:', localStorage.getItem('token'))
+
   const formatMemberSince = (joinedDate) => {
     if (!joinedDate) return '-'
     return new Date(joinedDate).toLocaleDateString('en-US', {

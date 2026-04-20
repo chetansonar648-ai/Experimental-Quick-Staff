@@ -18,6 +18,13 @@ export const useAdminProfile = () => {
   const [error, setError] = useState('')
 
   const refreshProfile = useCallback(async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('qs_token')
+    if (!token) {
+      setLoading(false)
+      setError('')
+      return
+    }
+
     setLoading(true)
     setError('')
     try {
@@ -39,7 +46,12 @@ export const useAdminProfile = () => {
   }, [])
 
   useEffect(() => {
-    refreshProfile()
+    const token = localStorage.getItem('token') || localStorage.getItem('qs_token')
+    if (token) {
+      refreshProfile()
+    } else {
+      setLoading(false)
+    }
   }, [refreshProfile])
 
   return {

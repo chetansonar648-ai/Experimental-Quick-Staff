@@ -16,6 +16,9 @@ adminApiInstance.interceptors.request.use((config) => {
 adminApiInstance.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401) {
+      console.warn('Unauthorized, but not logging out immediately')
+    }
     const message = error.response?.data?.message || 'Request failed'
     return Promise.reject(new Error(message))
   }

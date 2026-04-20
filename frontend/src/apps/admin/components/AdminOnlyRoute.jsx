@@ -13,8 +13,8 @@ const AdminOnlyRoute = ({ children }) => {
     return <div className="page-state">Loading...</div>
   }
 
-  if (!profile || profile.role !== 'admin') {
-    return <Navigate to="/login" replace />
+  if (profile && profile.role !== 'admin') {
+    return <Navigate to="/" replace />
   }
 
   return children
