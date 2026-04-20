@@ -52,7 +52,7 @@
 
 .search-box input {
   width: 100%;
-  padding: 10px 35px 10px 15px;
+  padding: 10px 15px 10px 40px;
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 14px;
@@ -60,10 +60,11 @@
 
 .search-icon {
   position: absolute;
-  right: 12px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #999;
+  color: #94a3b8;
+  font-size: 16px;
   pointer-events: none;
 }
 
