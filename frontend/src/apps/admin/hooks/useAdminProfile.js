@@ -29,7 +29,7 @@ export const useAdminProfile = () => {
     setError('')
     try {
       const data = await adminApi.getProfile()
-      const nextProfile = data?.profile || null
+      const nextProfile = data?.profile ?? (data?.id ? data : null)
       setProfile(nextProfile)
       if (nextProfile) {
         localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(nextProfile))
@@ -37,7 +37,9 @@ export const useAdminProfile = () => {
         localStorage.removeItem(ADMIN_PROFILE_KEY)
       }
     } catch (err) {
-      setError(err.message || 'Unable to load admin profile')
+      const message =
+        err?.response?.data?.message || err?.message || 'Unable to load admin profile'
+      setError(message)
       setProfile(null)
       localStorage.removeItem(ADMIN_PROFILE_KEY)
     } finally {

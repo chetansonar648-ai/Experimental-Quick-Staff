@@ -19,6 +19,7 @@ import profileRoutes from './routes/profile.js';
 import usersRoutes from './routes/users.js';
 
 import adminApiRoutes from './routes/adminApi.js';
+import adminRoutes from './routes/admin.routes.js';
 
 import { errorHandler } from './middleware/errorHandler.js';
 import { ensureAuxTables } from './config/db.js';
@@ -29,20 +30,28 @@ const app = express();
 
 
 app.use(helmet());
+const defaultOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'https://quickstaffhiringportal.vercel.app'
+]
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174'],
-    credentials: true,
+    origin: process.env.CORS_ORIGIN?.split(',') || defaultOrigins,
+    credentials: true
   })
-);
+)
 app.use(express.json());
 app.use(morgan('dev'));
 
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-app.use('/', adminApiRoutes);
+app.use('/api/admin', adminRoutes);
 
+app.use('/', adminApiRoutes);
 
 // API routes
 app.use('/api/auth', authRoutes);

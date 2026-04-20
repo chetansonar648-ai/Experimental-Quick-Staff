@@ -35,6 +35,7 @@ const Settings = () => {
   }, [profile])
 
   console.log('TOKEN:', localStorage.getItem('token'))
+  console.log('API URL:', import.meta.env.VITE_API_URL)
 
   const formatMemberSince = (joinedDate) => {
     if (!joinedDate) return '-'

@@ -27,12 +27,17 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+const defaultClientOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://quickstaffhiringportal.vercel.app'
+]
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN?.split(',') || ['http://localhost:5173', 'http://127.0.0.1:5173'],
-    credentials: true,
+    origin: process.env.CLIENT_ORIGIN?.split(',') || defaultClientOrigins,
+    credentials: true
   })
-);
+)
 
 app.use(express.json());
 app.use(cookieParser());
