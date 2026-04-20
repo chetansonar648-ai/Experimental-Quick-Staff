@@ -16,6 +16,7 @@ import reviewRoutes from './routes/reviews.js'; // reviews.routes.js does not ex
 import savedWorkerRoutes from './routes/savedWorkers.js'; // saved.routes.js does not exist
 import requestRoutes from './routes/requests.js';
 import adminApiRoutes from './routes/adminApi.js';
+import adminRoutes from './routes/admin.routes.js';
 
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
@@ -51,6 +52,7 @@ app.use('/api/workers', workerRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/saved-workers', savedWorkerRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Admin Panel API routes (without /api prefix for admin frontend compatibility)
 app.use('/', adminApiRoutes);

@@ -155,9 +155,16 @@
   gap: 8px;
   padding: 8px 16px;
   background: #f1f5f9;
+  border: none;
   border-radius: 8px;
   font-weight: 500;
   color: #475569;
+  cursor: pointer;
+  font: inherit;
+}
+
+.user-info:hover {
+  background: #e2e8f0;
 }
 
 .content-area {

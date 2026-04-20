@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom'
 import './DashboardLayout.css'
+import { useAdminProfileContext } from '../context/AdminProfileContext'
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const location = useLocation()
+  const navigate = useNavigate()
+  const { profile } = useAdminProfileContext()
 
   const menuItems = [
     { path: '/admin', label: 'Dashboard', icon: '📊' },
@@ -54,7 +57,13 @@ const DashboardLayout = () => {
         <header className="top-header">
           <h1>Admin Dashboard</h1>
           <div className="header-actions">
-            <span className="user-info">👤 Admin User</span>
+            <button
+              type="button"
+              className="user-info"
+              onClick={() => navigate('/admin/settings')}
+            >
+              👤 {profile?.name || 'Admin'}
+            </button>
           </div>
         </header>
         <div className="content-area">

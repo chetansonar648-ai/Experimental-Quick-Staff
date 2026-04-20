@@ -1,55 +1,75 @@
-import { useState } from 'react'
-import { API } from '../../../api/base.js'
+import { useMemo, useState } from 'react'
+import { useToast } from '../../../context/ToastContext.jsx'
+import { useAdminProfileContext } from '../context/AdminProfileContext'
+import { adminApi } from '../services/adminApi'
 import './Settings.css'
 
 const Settings = () => {
+  const { showToast } = useToast()
+  const { profile, loading, error, refreshProfile } = useAdminProfileContext()
   const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordLoading, setPasswordLoading] = useState(false)
   const [passForm, setPassForm] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   })
 
-  // Admin Profile Data (hardcoded for now)
-  const [adminProfile] = useState({
-    name: 'Admin User',
-    email: 'admin@example.com',
-    role: 'Administrator',
-    userId: '1',
-    joinedDate: '2024-01-15'
-  })
+  const adminProfile = useMemo(() => {
+    if (!profile) {
+      return {
+        name: '',
+        email: '',
+        role: '',
+        userId: '',
+        joinedDate: null
+      }
+    }
+    return {
+      name: profile.name || '',
+      email: profile.email || '',
+      role: profile.role || '',
+      userId: profile.id || '',
+      joinedDate: profile.created_at || null
+    }
+  }, [profile])
+
+  const formatMemberSince = (joinedDate) => {
+    if (!joinedDate) return '-'
+    return new Date(joinedDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
 
   const handleChangePassword = async (e) => {
     e.preventDefault()
 
     if (passForm.newPassword !== passForm.confirmPassword) {
-      alert("New passwords don't match!")
+      showToast("New passwords don't match", 'error')
       return
     }
 
     if (!passForm.currentPassword || !passForm.newPassword) {
-      return alert("Please fill all fields")
+      showToast('Please fill all fields', 'error')
+      return
     }
 
     try {
-      // Using admin user ID = 1
-      const res = await fetch(`${API}/users/1/password`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: passForm.newPassword })
+      setPasswordLoading(true)
+      await adminApi.changePassword({
+        currentPassword: passForm.currentPassword,
+        newPassword: passForm.newPassword
       })
 
-      if (res.ok) {
-        alert("Password updated successfully!")
-        setShowPasswordModal(false)
-        setPassForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
-      } else {
-        const err = await res.json()
-        alert("Failed: " + err.error)
-      }
+      showToast('Password updated successfully', 'success')
+      setShowPasswordModal(false)
+      setPassForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
     } catch (err) {
-      console.error(err)
-      alert("Error changing password")
+      showToast(err.message || 'Error changing password', 'error')
+    } finally {
+      setPasswordLoading(false)
     }
   }
 
@@ -67,10 +87,21 @@ const Settings = () => {
           <div className="settings-card profile-card">
             <div className="profile-avatar">
               <div className="avatar-circle">
-                {adminProfile.name.charAt(0)}
+                {(adminProfile.name || '?').charAt(0).toUpperCase()}
               </div>
             </div>
             <div className="profile-details">
+              {loading ? (
+                <p>Loading profile...</p>
+              ) : error ? (
+                <div>
+                  <p>{error}</p>
+                  <button type="button" className="action-button" onClick={refreshProfile}>
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <>
               <div className="profile-item">
                 <label>Name</label>
                 <p>{adminProfile.name}</p>
@@ -89,8 +120,10 @@ const Settings = () => {
               </div>
               <div className="profile-item">
                 <label>Member Since</label>
-                <p>{new Date(adminProfile.joinedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p>{formatMemberSince(adminProfile.joinedDate)}</p>
               </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -163,8 +196,8 @@ const Settings = () => {
                 <button type="button" className="cancel-btn" onClick={() => setShowPasswordModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="submit-btn">
-                  Update Password
+                <button type="submit" className="submit-btn" disabled={passwordLoading}>
+                  {passwordLoading ? 'Updating...' : 'Update Password'}
                 </button>
               </div>
             </form>

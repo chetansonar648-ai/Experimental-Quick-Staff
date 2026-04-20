@@ -7,6 +7,8 @@ import RatingsReviews from './pages/RatingsReviews'
 import Workers from './pages/Workers'
 import Clients from './pages/Clients'
 import Bookings from './pages/Bookings'
+import { AdminProfileProvider } from './context/AdminProfileContext'
+import AdminOnlyRoute from './components/AdminOnlyRoute'
 
 import { useState, useEffect, createContext, useContext } from 'react'
 
@@ -28,17 +30,26 @@ function App() {
 
   return (
     <ThemeContext.Provider value={{ darkMode, setDarkMode }}>
-      <Routes>
-        <Route path="/" element={<DashboardLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="workers" element={<Workers />} />
-          <Route path="clients" element={<Clients />} />
-          <Route path="bookings" element={<Bookings />} />
-          <Route path="ratings-reviews" element={<RatingsReviews />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
+      <AdminProfileProvider>
+        <Routes>
+          <Route path="/" element={<DashboardLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="workers" element={<Workers />} />
+            <Route path="clients" element={<Clients />} />
+            <Route path="bookings" element={<Bookings />} />
+            <Route path="ratings-reviews" element={<RatingsReviews />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route
+              path="settings"
+              element={
+                <AdminOnlyRoute>
+                  <Settings />
+                </AdminOnlyRoute>
+              }
+            />
+          </Route>
+        </Routes>
+      </AdminProfileProvider>
     </ThemeContext.Provider>
   )
 }
